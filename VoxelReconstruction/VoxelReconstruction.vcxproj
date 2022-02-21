@@ -64,7 +64,8 @@
     <IncludePath>$(OPENCV_DIR)\build\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$C:\opencv-4.5.5\opencv\build\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\opencv-4.5.5\opencv\build\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\opencv-4.5.5\opencv\build\x64\vc15\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
