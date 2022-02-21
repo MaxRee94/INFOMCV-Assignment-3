@@ -29,6 +29,31 @@
     <ClInclude Include="src\utilities\General.h" />
     <ClInclude Include="src\VoxelReconstruction.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Xml Include="data\cam1\intrinsics.xml" />
+    <Xml Include="data\cam2\intrinsics.xml" />
+    <Xml Include="data\cam3\intrinsics.xml" />
+    <Xml Include="data\cam4\intrinsics.xml" />
+    <Xml Include="data\checkerboard.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="data\cam1\background.avi" />
+    <None Include="data\cam1\checkerboard.avi" />
+    <None Include="data\cam1\intrinsics.avi" />
+    <None Include="data\cam1\video.avi" />
+    <None Include="data\cam2\background.avi" />
+    <None Include="data\cam2\checkerboard.avi" />
+    <None Include="data\cam2\intrinsics.avi" />
+    <None Include="data\cam2\video.avi" />
+    <None Include="data\cam3\background.avi" />
+    <None Include="data\cam3\checkerboard.avi" />
+    <None Include="data\cam3\intrinsics.avi" />
+    <None Include="data\cam3\video.avi" />
+    <None Include="data\cam4\background.avi" />
+    <None Include="data\cam4\checkerboard.avi" />
+    <None Include="data\cam4\intrinsics.avi" />
+    <None Include="data\cam4\video.avi" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{D024333B-E310-4DFB-B973-F49F08E73EB0}</ProjectGuid>
     <RootNamespace>OpenCVTemplate</RootNamespace>

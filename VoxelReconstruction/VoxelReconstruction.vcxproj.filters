@@ -60,4 +60,29 @@
       <Filter>src\controllers</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <Xml Include="data\checkerboard.xml" />
+    <Xml Include="data\cam4\intrinsics.xml" />
+    <Xml Include="data\cam3\intrinsics.xml" />
+    <Xml Include="data\cam2\intrinsics.xml" />
+    <Xml Include="data\cam1\intrinsics.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="data\cam4\video.avi" />
+    <None Include="data\cam4\background.avi" />
+    <None Include="data\cam4\checkerboard.avi" />
+    <None Include="data\cam4\intrinsics.avi" />
+    <None Include="data\cam3\video.avi" />
+    <None Include="data\cam3\background.avi" />
+    <None Include="data\cam3\checkerboard.avi" />
+    <None Include="data\cam3\intrinsics.avi" />
+    <None Include="data\cam2\video.avi" />
+    <None Include="data\cam2\background.avi" />
+    <None Include="data\cam2\checkerboard.avi" />
+    <None Include="data\cam2\intrinsics.avi" />
+    <None Include="data\cam1\video.avi" />
+    <None Include="data\cam1\background.avi" />
+    <None Include="data\cam1\checkerboard.avi" />
+    <None Include="data\cam1\intrinsics.avi" />
+  </ItemGroup>
 </Project>
