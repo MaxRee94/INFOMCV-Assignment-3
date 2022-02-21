@@ -40,3 +40,6 @@ VoxelReconstruction/.vs/VoxelReconstruction/v17/Browse.VC.opendb
 *.db
 *.ipch
 VoxelReconstruction/.vs/VoxelReconstruction/v17/.suo
+*.recipe
+*.pdb
+*.ilk
