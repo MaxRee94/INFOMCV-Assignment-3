@@ -30,3 +30,13 @@
 *.exe
 *.out
 *.app
+*.tlog
+VoxelReconstruction/x64/Debug/VoxelReconstruction.log
+VoxelReconstruction/x64/Debug/vc143.pdb
+VoxelReconstruction/x64/Debug/vc143.idb
+VoxelReconstruction/.vs/VoxelReconstruction/v17/Browse.VC.opendb
+*.db-wal
+*.db-shm
+*.db
+*.ipch
+VoxelReconstruction/.vs/VoxelReconstruction/v17/.suo
