@@ -1,1 +1,2 @@
 C:\Users\jimiu\Desktop\INFOMCV-Assignment-2\VoxelReconstruction\x64\Debug\VoxelReconstruction.exe
+E:\Development\INFOMCV-Assignment-2\VoxelReconstruction\x64\Debug\VoxelReconstruction.exe
