@@ -9,7 +9,7 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
 
-#define DATA_PATH "data/"
+#define DATA_PATH "data" + std::string(PATH_SEP)
 
 using namespace nl_uu_science_gmt;
 
@@ -57,7 +57,7 @@ cv::Mat Dilation(int dilation_elem, int dilation_size, cv::Mat& src)
 
 void performSegmentation() {
     using namespace std::literals;
-
+    
     src = cv::imread(DATA_PATH + "cam1/0.png"s, cv::IMREAD_COLOR);
     cv::Mat   hsv_img, mask, gray_img, initial_thresh;
     cv::Mat   second_thresh, add_res, and_thresh, xor_thresh;
@@ -147,7 +147,7 @@ int main(int argc, char** argv){
             {
                 images.clear();
 
-                // Looping over all the images in the directory
+                // Looping over all the frames in the movie file
                 cv::VideoCapture cap(DATA_PATH + "cam"s + std::to_string(camera) + "/"s + General::BackgroundVideoFile);
                 int i = 0;
                 int frameStep = 20;
@@ -163,7 +163,6 @@ int main(int argc, char** argv){
                     }
 
                     images.push_back(frame);
-
                 }
 
                 // Compute the mean
@@ -179,8 +178,9 @@ int main(int argc, char** argv){
     else {
 
         VoxelReconstruction::showKeys();
-        VoxelReconstruction vr("data" + std::string(PATH_SEP), 4);
-        vr.run(argc, argv);
+        VoxelReconstruction vr(DATA_PATH, 4);
+        performSegmentation();
+        // vr.run(argc, argv);
     }
 
 	return EXIT_SUCCESS;
