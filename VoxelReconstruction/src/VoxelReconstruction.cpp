@@ -99,6 +99,10 @@ void VoxelReconstruction::showKeys()
 	cout << "Rotate the 3D scene with left click+drag" << endl << endl;
 }
 
+vector<Camera*> VoxelReconstruction::get_cam_views() {
+	return m_cam_views;
+}
+
 /**
  * - If the xml-file with camera intrinsics, extrinsics and distortion is missing,
  *   create it from the checkerboard video and the measured camera intrinsics
@@ -121,6 +125,7 @@ void VoxelReconstruction::run(int argc, char** argv)
 
 	Reconstructor reconstructor(m_cam_views);
 	Scene3DRenderer scene3d(reconstructor, m_cam_views);
+
 	Glut glut(scene3d);
 
 #ifdef __linux__

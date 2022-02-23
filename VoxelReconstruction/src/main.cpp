@@ -55,7 +55,7 @@ cv::Mat Dilation(int dilation_elem, int dilation_size, cv::Mat& src)
     return dilation_dst;
 }
 
-void performSegmentation() {
+void performPostProcessing() {
     using namespace std::literals;
     
     src = cv::imread(DATA_PATH + "cam1/0.png"s, cv::IMREAD_COLOR);
@@ -112,7 +112,7 @@ cv::Mat3b getMean(const std::vector<cv::Mat3b>& images){
     m.setTo(cv::Scalar(0, 0, 0, 0));
 
     // Use a temp image to hold the conversion of each input image to CV_64FC3
-    // This will be allocated just the first time, since all your images have
+    // This will be allocated just the first time, since all images have
     // the same size.
     cv::Mat temp;
     for (int i = 0; i < images.size(); ++i)
@@ -120,13 +120,29 @@ cv::Mat3b getMean(const std::vector<cv::Mat3b>& images){
         // Convert the input images to CV_64FC3 ...
         images[i].convertTo(temp, CV_64FC3);
 
-        // ... so you can accumulate
+        // ... so we can accumulate
         m += temp;
     }
 
     // Convert back to CV_8UC3 type, applying the division to get the actual mean
     m.convertTo(m, CV_8U, 1. / images.size());
     return m;
+}
+
+std::vector<double> segment_background(std::vector<Camera*> m_cam_views) {
+    std::vector<double> segParams;
+    for (int cam_idx = 0; cam_idx < m_cam_views.size(); cam_idx++) {
+        Camera cam = *m_cam_views[cam_idx];
+
+        // Generate camera parameters
+        std::vector<double> camParams;
+
+        // Get mask generated using current parameter values
+        Mat mask = cam.getForegroundImage();
+
+        // Get fitness
+
+    }
 }
 
 int main(int argc, char** argv){
@@ -176,10 +192,13 @@ int main(int argc, char** argv){
 		}
 	}
     else {
-
         VoxelReconstruction::showKeys();
         VoxelReconstruction vr(DATA_PATH, 4);
-        performSegmentation();
+
+        std::vector<Camera*> m_cam_views = vr.get_cam_views();
+        segment_background(m_cam_views);
+        performPostProcessing();
+        
         // vr.run(argc, argv);
     }
 
