@@ -132,16 +132,24 @@ cv::Mat3b getMean(const std::vector<cv::Mat3b>& images){
 std::vector<double> segment_background(std::vector<Camera*> m_cam_views) {
     std::vector<double> segParams;
     for (int cam_idx = 0; cam_idx < m_cam_views.size(); cam_idx++) {
+        // Get camera and corresponding manual mask
         Camera cam = *m_cam_views[cam_idx];
+        Mat manual_mask = imread(
+            DATA_PATH + "cam" + std::to_string(cam_idx + 1) + std::string(PATH_SEP) + "manual_mask.png"
+        );
 
-        // Generate camera parameters
+        // Generate camera-specific HSV values
         std::vector<double> camParams;
 
         // Get mask generated using current parameter values
-        Mat mask = cam.getForegroundImage();
+        Mat auto_mask = cam.getForegroundImage();
 
         // Get fitness
+        Mat xor_thresh;
+        bitwise_xor(auto_mask, manual_mask, xor_thresh);
+        imshow(xor_thresh);
 
+        break;
     }
 }
 
