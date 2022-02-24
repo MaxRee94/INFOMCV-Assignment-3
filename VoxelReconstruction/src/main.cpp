@@ -2,9 +2,12 @@
 #include <string>
 #include <stdio.h>
 #include <iostream>
+#include <numeric>
+#include <random>
 
 #include "utilities/General.h"
 #include "VoxelReconstruction.h"
+#include "controllers/Scene3DRenderer.cpp"
 
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
@@ -12,7 +15,7 @@
 #define DATA_PATH "data" + std::string(PATH_SEP)
 
 using namespace nl_uu_science_gmt;
-
+using namespace cv;
 
 cv::Mat src, erosion_dst, dilation_dst, threshold_dst;
 
@@ -129,28 +132,79 @@ cv::Mat3b getMean(const std::vector<cv::Mat3b>& images){
     return m;
 }
 
-std::vector<double> segment_background(std::vector<Camera*> m_cam_views) {
-    std::vector<double> segParams;
-    for (int cam_idx = 0; cam_idx < m_cam_views.size(); cam_idx++) {
-        // Get camera and corresponding manual mask
-        Camera cam = *m_cam_views[cam_idx];
-        Mat manual_mask = imread(
-            DATA_PATH + "cam" + std::to_string(cam_idx + 1) + std::string(PATH_SEP) + "manual_mask.png"
-        );
+float get_cam_segm_fitness(
+    std::vector<int> hsv_params, std::vector<Camera*> m_cam_views, int cam_idx, Scene3DRenderer scene3d
+) {
+    // Get camera and corresponding manual mask
+    Camera cam = *m_cam_views[cam_idx];
+    Mat manual_mask = imread(
+        DATA_PATH + "cam" + std::to_string(cam_idx + 1) + std::string(PATH_SEP) + "manual_mask.png"
+    );
 
-        // Generate camera-specific HSV values
-        std::vector<double> camParams;
+    // Process foreground using new HSV values
+    scene3d.setHThreshold(hsv_params[0]);
+    scene3d.setSThreshold(hsv_params[1]);
+    scene3d.setVThreshold(hsv_params[2]);
+    scene3d.processForeground(&cam);
+    Mat auto_mask = cam.getForegroundImage();
 
-        // Get mask generated using current parameter values
-        Mat auto_mask = cam.getForegroundImage();
+    // Get mask fitness by comparing to manually-created mask
+    Mat xor_thresh;
+    bitwise_xor(auto_mask, manual_mask, xor_thresh);
+    imshow("Xor thresh", xor_thresh);
+    float fitness; // TODO: implement fitness computation from ratio of white/black pixels in xor_thresh
 
-        // Get fitness
-        Mat xor_thresh;
-        bitwise_xor(auto_mask, manual_mask, xor_thresh);
-        imshow(xor_thresh);
+    return fitness;
+}
 
-        break;
+std::vector<int> get_hsv_params(std::vector<Camera*> m_cam_views, Scene3DRenderer scene3d) {
+    std::vector<int> optima = { 123, 123, 123 };
+    int dt_since_update = 0;
+    int search_threshold = 10;
+    float best_fitness = 0.0f;
+    float greediness = 2.0f;
+    int stddev = 10000;
+    std::vector<int> hsv_sample;
+    std::default_random_engine gen;
+    int hsv_element;
+    while (true) {
+        // Sample HSV space
+        hsv_sample.clear();
+        for (int i = 0; i < 3; i++) {
+            std::normal_distribution<double> distr(optima[i], stddev);
+            hsv_element = distr(gen);
+            hsv_sample.push_back(hsv_element);
+        }
+        hsv_sample = {};
+
+        // Test segmentation fitness values for all cameras
+        std::vector<float> fitnesses;
+        for (int cam_idx = 0; cam_idx < m_cam_views.size(); cam_idx++) {
+            float fitness = get_cam_segm_fitness(hsv_sample, m_cam_views, cam_idx, scene3d);
+            fitnesses.push_back(fitness);
+        }
+        float avg_fitness = std::accumulate(fitnesses.begin(), fitnesses.end(), 0.0f) / 4.0f;
+
+        // Update if sample fitness is better than previous best value
+        if (avg_fitness > best_fitness) {
+            best_fitness = avg_fitness;
+            optima = hsv_sample;
+            dt_since_update = 0;
+        }
+        else {
+            dt_since_update++;
+        }
+
+        // Decrease standard deviation to increase preference for samples close to current optima
+        stddev /= greediness;
+
+        // Stop searching if no updates have occurred for a set number of iterations
+        if (dt_since_update > search_threshold) {
+            break;
+        }
     }
+
+    return optima;
 }
 
 int main(int argc, char** argv){
@@ -204,10 +258,9 @@ int main(int argc, char** argv){
         VoxelReconstruction vr(DATA_PATH, 4);
 
         std::vector<Camera*> m_cam_views = vr.get_cam_views();
-        segment_background(m_cam_views);
-        performPostProcessing();
-        
-        // vr.run(argc, argv);
+        Scene3DRenderer scene3d = vr.run(argc, argv, false, false);
+        std::vector<int> hsv_params = get_hsv_params(m_cam_views, scene3d);
+        //performPostProcessing();
     }
 
 	return EXIT_SUCCESS;

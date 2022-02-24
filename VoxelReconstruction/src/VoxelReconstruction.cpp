@@ -109,7 +109,7 @@ vector<Camera*> VoxelReconstruction::get_cam_views() {
  * - After that initialize the scene rendering classes
  * - Run it!
  */
-void VoxelReconstruction::run(int argc, char** argv)
+Scene3DRenderer VoxelReconstruction::run(int argc, char** argv, bool show_glut = true, bool manual_hsv = true)
 {
 	for (int v = 0; v < m_cam_views_amount; ++v)
 	{
@@ -124,10 +124,11 @@ void VoxelReconstruction::run(int argc, char** argv)
 	namedWindow(VIDEO_WINDOW, CV_WINDOW_KEEPRATIO);
 
 	Reconstructor reconstructor(m_cam_views);
-	Scene3DRenderer scene3d(reconstructor, m_cam_views);
+	Scene3DRenderer scene3d(reconstructor, m_cam_views, manual_hsv);
 
-	Glut glut(scene3d);
-
+	if (show_glut) {
+		Glut glut(scene3d);
+	
 #ifdef __linux__
 	glut.initializeLinux(SCENE_WINDOW.c_str(), argc, argv);
 #elif defined _WIN32
@@ -135,5 +136,6 @@ void VoxelReconstruction::run(int argc, char** argv)
 	glut.mainLoopWindows();
 #endif
 }
+	return scene3d;
 
 } /* namespace nl_uu_science_gmt */

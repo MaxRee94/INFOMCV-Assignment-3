@@ -27,7 +27,7 @@ namespace nl_uu_science_gmt
  * Scene properties class (mostly called by Glut)
  */
 Scene3DRenderer::Scene3DRenderer(
-		Reconstructor &r, const vector<Camera*> &cs) :
+		Reconstructor &r, const vector<Camera*> &cs, bool manual_hsv = true) :
 				m_reconstructor(r),
 				m_cameras(cs),
 				m_num(4),
@@ -75,13 +75,15 @@ Scene3DRenderer::Scene3DRenderer(
 	m_v_threshold = V;
 	m_pv_threshold = V;
 
-	createTrackbar("Frame", VIDEO_WINDOW, &m_current_frame, m_number_of_frames - 2);
-	createTrackbar("H", VIDEO_WINDOW, &m_h_threshold, 255);
-	createTrackbar("S", VIDEO_WINDOW, &m_s_threshold, 255);
-	createTrackbar("V", VIDEO_WINDOW, &m_v_threshold, 255);
+	if (manual_hsv) {
+		createTrackbar("Frame", VIDEO_WINDOW, &m_current_frame, m_number_of_frames - 2);
+		createTrackbar("H", VIDEO_WINDOW, &m_h_threshold, 255);
+		createTrackbar("S", VIDEO_WINDOW, &m_s_threshold, 255);
+		createTrackbar("V", VIDEO_WINDOW, &m_v_threshold, 255);
 
-	createFloorGrid();
-	setTopView();
+		createFloorGrid();
+		setTopView();
+	}
 }
 
 /**

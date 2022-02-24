@@ -10,14 +10,9 @@
 
 #include <string>
 #include <vector>
-#include <opencv2/core/mat.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/imgproc/types_c.h>
 
 #include "controllers/Camera.h"
 
-using namespace cv;
 namespace nl_uu_science_gmt
 {
 
@@ -35,7 +30,7 @@ public:
 	std::vector<Camera*> get_cam_views();
 	static void showKeys();
 
-	void run(int, char**);
+	Scene3DRenderer run(int, char**, bool show_glut, bool manual_hsv = true);
 };
 
 } /* namespace nl_uu_science_gmt */
