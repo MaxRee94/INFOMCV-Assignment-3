@@ -26,7 +26,7 @@ namespace nl_uu_science_gmt
  * Voxel reconstruction class
  */
 Reconstructor::Reconstructor(
-		const vector<Camera*> &cs) :
+		const vector<Camera*> &cs, bool init_voxels) :
 				m_cameras(cs),
 				m_height(2048),
 				m_step(32)
@@ -42,7 +42,9 @@ Reconstructor::Reconstructor(
 	const size_t edge = 2 * m_height;
 	m_voxels_amount = (edge / m_step) * (edge / m_step) * (m_height / m_step);
 
-	initialize();
+	if (init_voxels) {
+		initialize();
+	}
 }
 
 /**

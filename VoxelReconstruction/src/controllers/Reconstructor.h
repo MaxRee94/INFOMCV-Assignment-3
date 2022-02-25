@@ -49,7 +49,7 @@ private:
 
 public:
 	Reconstructor(
-			const std::vector<Camera*> &);
+			const std::vector<Camera*> &, bool = true);
 	virtual ~Reconstructor();
 
 	void update();

@@ -7,7 +7,6 @@
 
 #include "utilities/General.h"
 #include "VoxelReconstruction.h"
-#include "controllers/Scene3DRenderer.cpp"
 
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
@@ -21,6 +20,8 @@ cv::Mat src, erosion_dst, dilation_dst, threshold_dst;
 
 int dilation_elem = 0;
 int dilation_size = 0;
+
+std::vector<int> img_size = { 644, 486 };
 
 int const max_elem = 2;
 int const max_kernel_size = 21;
@@ -133,41 +134,65 @@ cv::Mat3b getMean(const std::vector<cv::Mat3b>& images){
 }
 
 float get_cam_segm_fitness(
-    std::vector<int> hsv_params, std::vector<Camera*> m_cam_views, int cam_idx, Scene3DRenderer scene3d
+    std::vector<int> hsv_params, std::vector<Camera*> m_cam_views, int cam_idx, Scene3DRenderer scene3d,
+    double total_pix, std::vector<Mat> manual_masks
 ) {
     // Get camera and corresponding manual mask
-    Camera cam = *m_cam_views[cam_idx];
-    Mat manual_mask = imread(
-        DATA_PATH + "cam" + std::to_string(cam_idx + 1) + std::string(PATH_SEP) + "manual_mask.png"
-    );
+    Camera* cam = m_cam_views[cam_idx];
+    Mat manual_mask = manual_masks[cam_idx];
 
     // Process foreground using new HSV values
     scene3d.setHThreshold(hsv_params[0]);
     scene3d.setSThreshold(hsv_params[1]);
     scene3d.setVThreshold(hsv_params[2]);
-    scene3d.processForeground(&cam);
-    Mat auto_mask = cam.getForegroundImage();
+    scene3d.processForeground(cam);
+    Mat auto_mask = cam->getForegroundImage();
 
     // Get mask fitness by comparing to manually-created mask
     Mat xor_thresh;
+    imshow("Manual", manual_mask);
+    imshow("Auto", auto_mask);
+    std::cout << "Size of auto:" << auto_mask.cols << std::endl;
+    waitKey(0);
     bitwise_xor(auto_mask, manual_mask, xor_thresh);
     imshow("Xor thresh", xor_thresh);
-    float fitness; // TODO: implement fitness computation from ratio of white/black pixels in xor_thresh
+    waitKey(0);
+    double white_pix = static_cast<double>(cv::countNonZero(xor_thresh));
+    double fitness = white_pix / total_pix;
 
     return fitness;
 }
 
 std::vector<int> get_hsv_params(std::vector<Camera*> m_cam_views, Scene3DRenderer scene3d) {
+    std::vector<Mat> manual_masks;
+    for (int c = 0; c < m_cam_views.size(); c++) {
+        // Advance cam frame to make sure it contains an active frame
+        Camera* cam = m_cam_views[c];
+        cam->getVideoFrame(5);
+
+        // Read- and threshold manual mask
+        Mat tmp = imread(
+            DATA_PATH + "cam" + std::to_string(c + 1) + std::string(PATH_SEP) + "manual_mask.png"
+        );
+        Mat manual_mask;
+        threshold(tmp, manual_mask, 250, 255, THRESH_BINARY);
+        manual_masks.push_back(manual_mask);
+    }
+
     std::vector<int> optima = { 123, 123, 123 };
     int dt_since_update = 0;
     int search_threshold = 10;
+    double total_pix = static_cast<double>(img_size[0] * img_size[1]);
     float best_fitness = 0.0f;
     float greediness = 2.0f;
-    int stddev = 10000;
+    float stddev = 10000.0f;
     std::vector<int> hsv_sample;
     std::default_random_engine gen;
     int hsv_element;
+    int j = 0;
     while (true) {
+        std::cout << "Starting segmentation parameter tuning..." << std::endl;
+
         // Sample HSV space
         hsv_sample.clear();
         for (int i = 0; i < 3; i++) {
@@ -175,12 +200,11 @@ std::vector<int> get_hsv_params(std::vector<Camera*> m_cam_views, Scene3DRendere
             hsv_element = distr(gen);
             hsv_sample.push_back(hsv_element);
         }
-        hsv_sample = {};
 
         // Test segmentation fitness values for all cameras
         std::vector<float> fitnesses;
-        for (int cam_idx = 0; cam_idx < m_cam_views.size(); cam_idx++) {
-            float fitness = get_cam_segm_fitness(hsv_sample, m_cam_views, cam_idx, scene3d);
+        for (int c = 0; c < m_cam_views.size(); c++) {
+            float fitness = get_cam_segm_fitness(hsv_sample, m_cam_views, c, scene3d, total_pix, manual_masks);
             fitnesses.push_back(fitness);
         }
         float avg_fitness = std::accumulate(fitnesses.begin(), fitnesses.end(), 0.0f) / 4.0f;
@@ -195,13 +219,20 @@ std::vector<int> get_hsv_params(std::vector<Camera*> m_cam_views, Scene3DRendere
             dt_since_update++;
         }
 
-        // Decrease standard deviation to increase preference for samples close to current optima
+        // Decrease standard deviation to favor samples close to current optima
         stddev /= greediness;
+
+        if (j % 10 == 0) {
+            std::cout << "  iteration: " << j << ". stddev: " << stddev << ".\n";
+        }
 
         // Stop searching if no updates have occurred for a set number of iterations
         if (dt_since_update > search_threshold) {
+            std::cout << "Finished segmentation parameter tuning." << std::endl;
             break;
         }
+
+        j++;
     }
 
     return optima;

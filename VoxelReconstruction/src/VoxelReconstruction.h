@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "controllers/Camera.h"
+#include "controllers/Scene3DRenderer.h"
 
 namespace nl_uu_science_gmt
 {
@@ -30,7 +31,7 @@ public:
 	std::vector<Camera*> get_cam_views();
 	static void showKeys();
 
-	Scene3DRenderer run(int, char**, bool show_glut, bool manual_hsv = true);
+	Scene3DRenderer run(int, char**, bool, bool);
 };
 
 } /* namespace nl_uu_science_gmt */

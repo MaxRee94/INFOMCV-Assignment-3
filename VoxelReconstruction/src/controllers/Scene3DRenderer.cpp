@@ -27,7 +27,7 @@ namespace nl_uu_science_gmt
  * Scene properties class (mostly called by Glut)
  */
 Scene3DRenderer::Scene3DRenderer(
-		Reconstructor &r, const vector<Camera*> &cs, bool manual_hsv = true) :
+		Reconstructor &r, const vector<Camera*> &cs, bool manual_hsv) :
 				m_reconstructor(r),
 				m_cameras(cs),
 				m_num(4),
@@ -129,6 +129,9 @@ void Scene3DRenderer::processForeground(
 	Mat hsv_image;
 	cvtColor(camera->getFrame(), hsv_image, CV_BGR2HSV);  // from BGR to HSV color space
 
+	imshow("hsv img", hsv_image);
+	cout << "Using hsv thresholds: " << m_h_threshold << ", " << m_s_threshold << ", " << m_v_threshold << std::endl;
+
 	vector<Mat> channels;
 	split(hsv_image, channels);  // Split the HSV-channels for further analysis
 
@@ -148,7 +151,6 @@ void Scene3DRenderer::processForeground(
 	bitwise_or(foreground, background, foreground);
 
 	// Improve the foreground image
-
 	camera->setForegroundImage(foreground);
 }
 
