@@ -152,11 +152,10 @@ float get_cam_segm_fitness(
     Mat xor_thresh;
     imshow("Manual", manual_mask);
     imshow("Auto", auto_mask);
-    std::cout << "Size of auto:" << auto_mask.cols << std::endl;
-    waitKey(0);
+    //waitKey(0);
     bitwise_xor(auto_mask, manual_mask, xor_thresh);
     imshow("Xor thresh", xor_thresh);
-    waitKey(0);
+    //waitKey(0);
     double white_pix = static_cast<double>(cv::countNonZero(xor_thresh));
     double fitness = white_pix / total_pix;
 
@@ -168,14 +167,16 @@ std::vector<int> get_hsv_params(std::vector<Camera*> m_cam_views, Scene3DRendere
     for (int c = 0; c < m_cam_views.size(); c++) {
         // Advance cam frame to make sure it contains an active frame
         Camera* cam = m_cam_views[c];
-        cam->getVideoFrame(5);
+        cam->getVideoFrame(10);
 
         // Read- and threshold manual mask
         Mat tmp = imread(
             DATA_PATH + "cam" + std::to_string(c + 1) + std::string(PATH_SEP) + "manual_mask.png"
         );
+        std::vector<Mat> channels;
+        split(tmp, channels);
         Mat manual_mask;
-        threshold(tmp, manual_mask, 250, 255, THRESH_BINARY);
+        threshold(channels[0], manual_mask, 150, 255, THRESH_BINARY);
         manual_masks.push_back(manual_mask);
     }
 
@@ -198,6 +199,12 @@ std::vector<int> get_hsv_params(std::vector<Camera*> m_cam_views, Scene3DRendere
         for (int i = 0; i < 3; i++) {
             std::normal_distribution<double> distr(optima[i], stddev);
             hsv_element = distr(gen);
+            if (hsv_element < 0) {
+                hsv_element = 0;
+            }
+            if (hsv_element > 255) {
+                hsv_element = 255;
+            }
             hsv_sample.push_back(hsv_element);
         }
 

@@ -13,6 +13,7 @@
 #include <opencv2/imgproc/types_c.h>
 #include <stddef.h>
 #include <string>
+#include <iostream>
 
 #include "../utilities/General.h"
 
@@ -130,7 +131,7 @@ void Scene3DRenderer::processForeground(
 	cvtColor(camera->getFrame(), hsv_image, CV_BGR2HSV);  // from BGR to HSV color space
 
 	imshow("hsv img", hsv_image);
-	cout << "Using hsv thresholds: " << m_h_threshold << ", " << m_s_threshold << ", " << m_v_threshold << std::endl;
+	std::cout << "Using hsv thresholds: " << m_h_threshold << ", " << m_s_threshold << ", " << m_v_threshold << std::endl;
 
 	vector<Mat> channels;
 	split(hsv_image, channels);  // Split the HSV-channels for further analysis
