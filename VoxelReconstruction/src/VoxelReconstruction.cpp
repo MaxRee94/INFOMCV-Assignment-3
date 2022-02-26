@@ -110,7 +110,7 @@ namespace nl_uu_science_gmt
 	 * - Run it!
 	 */
 	Scene3DRenderer VoxelReconstruction::run(
-		int argc, char** argv, bool show_glut = true, bool manual_hsv = true
+		int argc, char** argv, bool show_glut, bool manual_hsv
 	)
 	{
 		for (int v = 0; v < m_cam_views_amount; ++v)

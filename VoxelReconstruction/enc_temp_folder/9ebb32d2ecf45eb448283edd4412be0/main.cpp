@@ -190,7 +190,7 @@ std::vector<int> get_hsv_params(std::vector<Camera*> m_cam_views, Scene3DRendere
     float search_scope_minimum = 0.01f;
 
     // Initial values
-    std::vector<int> optima = { 127, 127, 127 }; // Start with average values
+    std::vector<int> optima = { 123, 123, 123 }; // Start with average values
     int dt_since_update = 0;
     double total_pix = static_cast<double>(img_size[0] * img_size[1]);
     double best_fitness = 0.0f;

@@ -31,7 +31,7 @@ public:
 	std::vector<Camera*> get_cam_views();
 	static void showKeys();
 
-	Scene3DRenderer run(int, char**, bool, bool);
+	Scene3DRenderer run(int, char**, bool = true, bool = true);
 };
 
 } /* namespace nl_uu_science_gmt */
