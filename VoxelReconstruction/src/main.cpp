@@ -4,6 +4,7 @@
 #include <iostream>
 #include <numeric>
 #include <random>
+#include <list>
 
 #include "utilities/General.h"
 #include "VoxelReconstruction.h"
@@ -14,6 +15,7 @@
 #define DATA_PATH "data" + std::string(PATH_SEP)
 
 using namespace nl_uu_science_gmt;
+using namespace std;
 using namespace cv;
 
 cv::Mat src, erosion_dst, dilation_dst, threshold_dst;
@@ -59,53 +61,76 @@ cv::Mat Dilation(int dilation_elem, int dilation_size, cv::Mat& src)
     return dilation_dst;
 }
 
-void performPostProcessing() {
-    using namespace std::literals;
+//void performPostProcessing() {
+//    using namespace std::literals;
+//    
+//    src = cv::imread(DATA_PATH + "cam1/0.png"s, cv::IMREAD_COLOR);
+//    cv::Mat   hsv_img, mask, gray_img, initial_thresh;
+//    cv::Mat   second_thresh, add_res, and_thresh, xor_thresh;
+//    cv::Mat   result_thresh, rr_thresh, final_thresh;
+//    // Load source Image
+//    imshow("Original Image", src);
+//    cvtColor(src, hsv_img, cv::COLOR_BGR2HSV);
+//    imshow("HSV Image", hsv_img);
+//
+//    //imwrite("HSV Image.jpg", hsv_img);
+//
+//    inRange(hsv_img, cv::Scalar(15, 45, 45), cv::Scalar(65, 255, 255), mask);
+//    imshow("Mask Image", mask);
+//
+//    cvtColor(src, gray_img, cv::COLOR_BGR2GRAY);
+//    adaptiveThreshold(gray_img, initial_thresh, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, 257, 2);
+//    imshow("AdaptiveThresh Image", initial_thresh);
+//
+//    add(mask, initial_thresh, add_res);
+//    erode(add_res, add_res, cv::Mat(), cv::Point(-1, -1), 1);
+//    dilate(add_res, add_res, cv::Mat(), cv::Point(-1, -1), 5);
+//    imshow("Bitwise Res", add_res);
+//
+//    threshold(gray_img, second_thresh, 170, 255, cv::THRESH_BINARY_INV | cv::THRESH_OTSU);
+//    imshow("TreshImge", second_thresh);
+//
+//    bitwise_and(add_res, second_thresh, and_thresh);
+//    imshow("andthresh", and_thresh);
+//
+//    bitwise_xor(add_res, second_thresh, xor_thresh);
+//    imshow("xorthresh", xor_thresh);
+//
+//    bitwise_or(and_thresh, xor_thresh, result_thresh);
+//    imshow("Result image", result_thresh);
+//
+//    bitwise_and(add_res, result_thresh, final_thresh);
+//    imshow("Final Thresh", final_thresh);
+//    erode(final_thresh, final_thresh, cv::Mat(), cv::Point(-1, -1), 5);
+//
+//    bitwise_and(src, src, rr_thresh, final_thresh);
+//    imshow("Segmented Image", rr_thresh);
+//    imwrite("Segmented Image.jpg", rr_thresh);
+//
+//    cv::waitKey(0);
+//}
+
+
+Mat getPostProcessed(Mat mask, vector<int> params) {
+    // Execute dilation/erosion sequence according to given parameters.
+    // Positive numbers correspond to dilation iterations, negative to erosion iterations.
+    // Zero values mean that neither dilation nor erosion are applied.
+    Point anchor = Point(-1, -1);
+    Mat kernel = Mat();
+    for (int i = 0; i < params.size(); i++) {
+        if (params[i] < 0) {
+            erode(mask, mask, kernel, anchor, -params[i]);
+        }
+        else if (params[i] > 0) {
+            dilate(mask, mask, kernel, anchor, params[i]);
+        }
+    }
     
-    src = cv::imread(DATA_PATH + "cam1/0.png"s, cv::IMREAD_COLOR);
-    cv::Mat   hsv_img, mask, gray_img, initial_thresh;
-    cv::Mat   second_thresh, add_res, and_thresh, xor_thresh;
-    cv::Mat   result_thresh, rr_thresh, final_thresh;
-    // Load source Image
-    imshow("Original Image", src);
-    cvtColor(src, hsv_img, cv::COLOR_BGR2HSV);
-    imshow("HSV Image", hsv_img);
+    // imshow("Bitwise Res", mask);
+    // imshow("Initial mask", auto_mask);
+    // cv::waitKey(0);
 
-    //imwrite("HSV Image.jpg", hsv_img);
-
-    inRange(hsv_img, cv::Scalar(15, 45, 45), cv::Scalar(65, 255, 255), mask);
-    imshow("Mask Image", mask);
-
-    cvtColor(src, gray_img, cv::COLOR_BGR2GRAY);
-    adaptiveThreshold(gray_img, initial_thresh, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, 257, 2);
-    imshow("AdaptiveThresh Image", initial_thresh);
-
-    add(mask, initial_thresh, add_res);
-    erode(add_res, add_res, cv::Mat(), cv::Point(-1, -1), 1);
-    dilate(add_res, add_res, cv::Mat(), cv::Point(-1, -1), 5);
-    imshow("Bitwise Res", add_res);
-
-    threshold(gray_img, second_thresh, 170, 255, cv::THRESH_BINARY_INV | cv::THRESH_OTSU);
-    imshow("TreshImge", second_thresh);
-
-    bitwise_and(add_res, second_thresh, and_thresh);
-    imshow("andthresh", and_thresh);
-
-    bitwise_xor(add_res, second_thresh, xor_thresh);
-    imshow("xorthresh", xor_thresh);
-
-    bitwise_or(and_thresh, xor_thresh, result_thresh);
-    imshow("Result image", result_thresh);
-
-    bitwise_and(add_res, result_thresh, final_thresh);
-    imshow("Final Thresh", final_thresh);
-    erode(final_thresh, final_thresh, cv::Mat(), cv::Point(-1, -1), 5);
-
-    bitwise_and(src, src, rr_thresh, final_thresh);
-    imshow("Segmented Image", rr_thresh);
-    imwrite("Segmented Image.jpg", rr_thresh);
-
-    cv::waitKey(0);
+    return mask;
 }
 
 cv::Mat3b getMean(const std::vector<cv::Mat3b>& images){
@@ -155,7 +180,7 @@ std::vector<Mat> get_manual_masks(std::vector<Camera*> m_cam_views) {
 
 double get_cam_segm_fitness(
     std::vector<int> hsv_params, std::vector<Camera*> m_cam_views, int cam_idx, Scene3DRenderer scene3d,
-    double total_pix, std::vector<Mat> manual_masks, bool show = false
+    double total_pix, std::vector<Mat> manual_masks, std::vector<int> post_params, bool show = false
 ) {
     // Get camera and corresponding manual mask
     Camera* cam = m_cam_views[cam_idx];
@@ -168,12 +193,16 @@ double get_cam_segm_fitness(
     scene3d.processForeground(cam);
     Mat auto_mask = cam->getForegroundImage();
 
+    // Execute post processing steps
+    Mat result = getPostProcessed(auto_mask, post_params);
+
     // Get mask fitness by comparing to manually-created mask
     Mat xor_thresh;
-    bitwise_xor(auto_mask, manual_mask, xor_thresh);
+    bitwise_xor(result, manual_mask, xor_thresh);
     if (show) {
         imshow("Manual", manual_mask);
-        imshow("Auto", auto_mask);
+        imshow("Auto Raw", auto_mask);
+        imshow("Post-processed", result);
         imshow("Xor thresh", xor_thresh);
     }
     double white_pix = static_cast<double>(cv::countNonZero(xor_thresh));
@@ -182,21 +211,25 @@ double get_cam_segm_fitness(
     return fitness;
 }
 
-std::vector<int> get_hsv_params(std::vector<Camera*> m_cam_views, Scene3DRenderer scene3d) {
+std::vector<vector<int>> get_bg_segm_params(std::vector<Camera*> m_cam_views, Scene3DRenderer scene3d) {
     // Hyperparameters
-    int iteration_threshold = 100;
+    int iteration_threshold = 20;
     float convergence_velocity = 1.5f;
-    float stddev = 500.0f;
-    float search_scope_minimum = 0.01f;
+    float stdev_multiplier = 2.0f;
+    float stdev_multiplier_minimum = 0.00001f;
+    vector<int> post_iteration_range = { -5, 5 };
 
     // Initial values
-    std::vector<int> optima = { 127, 127, 127 }; // Start with average values
+    std::vector<int> hsv_optima = { 128, 128, 128 }; // Start with mean values (255/2)
+    std::vector<int> post_optima = { 0, 0 }; // Start with mean values (neither dilation nor erosion)
     int dt_since_update = 0;
     double total_pix = static_cast<double>(img_size[0] * img_size[1]);
-    double best_fitness = 0.0f;
+    double best_fitness = 0.0;
     std::vector<int> hsv_sample;
+    std::vector<int> post_sample;
     std::default_random_engine gen;
     int hsv_element;
+    int post_element;
     double fitness;
     double avg_fitness;
     int j = 0;
@@ -209,8 +242,10 @@ std::vector<int> get_hsv_params(std::vector<Camera*> m_cam_views, Scene3DRendere
         // Sample HSV space
         hsv_sample.clear();
         for (int i = 0; i < 3; i++) {
-            std::normal_distribution<double> distr(optima[i], stddev);
+            std::normal_distribution<float> distr(hsv_optima[i], stdev_multiplier * 255.0f);
             hsv_element = distr(gen);
+
+            // Clamp values to interval [0, 255]
             if (hsv_element < 0) {
                 hsv_element = 0;
             }
@@ -220,10 +255,28 @@ std::vector<int> get_hsv_params(std::vector<Camera*> m_cam_views, Scene3DRendere
             hsv_sample.push_back(hsv_element);
         }
 
+        // Sample space of possible combinations of post-processing steps
+        post_sample.clear();
+        for (int i = 0; i < post_optima.size(); i++) {
+            std::normal_distribution<float> distr(post_optima[i], stdev_multiplier * post_iteration_range[1]);
+            post_element = distr(gen);
+
+            // Clamp values to post_iteration_range
+            if (post_element < post_iteration_range[0]) {
+                post_element = post_iteration_range[0];
+            }
+            if (post_element > post_iteration_range[1]) {
+                post_element = post_iteration_range[1];
+            }
+            post_sample.push_back(post_element);
+        }
+
         // Test segmentation fitness values for all cameras
         fitnesses.clear();
         for (int c = 0; c < m_cam_views.size(); c++) {
-            fitness = get_cam_segm_fitness(hsv_sample, m_cam_views, c, scene3d, total_pix, manual_masks);
+            fitness = get_cam_segm_fitness(
+                hsv_sample, m_cam_views, c, scene3d, total_pix, manual_masks, post_sample
+            );
             fitnesses.push_back(fitness);
         }
         avg_fitness = std::accumulate(fitnesses.begin(), fitnesses.end(), 0.0) / 4.0;
@@ -231,22 +284,23 @@ std::vector<int> get_hsv_params(std::vector<Camera*> m_cam_views, Scene3DRendere
         // Update if sample fitness is better than previous best value
         if (avg_fitness > best_fitness) {
             best_fitness = avg_fitness;
-            optima = hsv_sample;
+            hsv_optima = hsv_sample;
+            post_optima = post_sample;
             dt_since_update = 0;
         }
         else {
             dt_since_update++;
         }
 
-        // Decrease standard deviation to favor samples close to current optima
-        stddev /= convergence_velocity;
-
         if (j % 10 == 0) {
-            std::cout << "  iteration: " << j << ". stddev: " << stddev << ".\n";
+            std::cout << "  iteration: " << j << ". stdev_multiplier: " << stdev_multiplier << ".\n";
         }
 
+        // Decrease standard deviation to favor samples close to current optima
+        stdev_multiplier = max(stdev_multiplier / convergence_velocity, stdev_multiplier_minimum);
+
         // Stop searching if no updates have occurred for a set number of iterations
-        if (dt_since_update > iteration_threshold || stddev < search_scope_minimum) {
+        if (dt_since_update > iteration_threshold) {
             std::cout << "Finished segmentation parameter tuning." << std::endl;
             break;
         }
@@ -254,17 +308,17 @@ std::vector<int> get_hsv_params(std::vector<Camera*> m_cam_views, Scene3DRendere
         j++;
     }
 
-    /*std::vector<float> fitnesses;
     for (int c = 0; c < m_cam_views.size(); c++) {
-        double fitness = get_cam_segm_fitness(optima, m_cam_views, c, scene3d, total_pix, manual_masks, true);
-        fitnesses.push_back(fitness);
+        double fitness = get_cam_segm_fitness(
+            hsv_optima, m_cam_views, c, scene3d, total_pix, manual_masks, post_optima, true
+        );
     }
-    double avg_fitness = std::accumulate(fitnesses.begin(), fitnesses.end(), 0.0) / 4.0;*/
     std::cout << "Best fitness: " << best_fitness << " after " << j << " iterations." << std::endl;
-    std::cout << "Found optima: H " << optima[0] << " S " << optima[1] << " V " << optima[2] << std::endl;
+    std::cout << "Found hsv optima: H " << hsv_optima[0] << " S " << hsv_optima[1] << " V " << hsv_optima[2] << std::endl;
+    std::cout << "Found post-processing optima: " << post_optima[0] << ", " << post_optima[1];
     waitKey();
 
-    return optima;
+    return { hsv_optima, post_optima };
 }
 
 int main(int argc, char** argv){
@@ -313,12 +367,12 @@ int main(int argc, char** argv){
             }
 		}
         if (argv[1] == "-s"s || argv[1] == "--segmentation"s) {
-            VoxelReconstruction::showKeys();
+            // VoxelReconstruction::showKeys();
             VoxelReconstruction vr(DATA_PATH, 4);
 
             std::vector<Camera*> m_cam_views = vr.get_cam_views();
             Scene3DRenderer scene3d = vr.run(argc, argv, false, false);
-            std::vector<int> hsv_params = get_hsv_params(m_cam_views, scene3d);
+            std::vector<vector<int>> bg_segm_params = get_bg_segm_params(m_cam_views, scene3d);
             //performPostProcessing();
         }
 	}
