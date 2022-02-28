@@ -111,26 +111,37 @@ cv::Mat Dilation(int dilation_elem, int dilation_size, cv::Mat& src)
 //}
 
 
-Mat getPostProcessed(Mat mask, vector<int> params) {
+Mat getPostProcessed(Mat input, vector<int> params) {
     // Execute dilation/erosion sequence according to given parameters.
     // Positive numbers correspond to dilation iterations, negative to erosion iterations.
     // Zero values mean that neither dilation nor erosion are applied.
-    Point anchor = Point(-1, -1);
-    Mat kernel = Mat();
-    for (int i = 0; i < params.size(); i++) {
-        if (params[i] < 0) {
-            erode(mask, mask, kernel, anchor, -params[i]);
-        }
-        else if (params[i] > 0) {
-            dilate(mask, mask, kernel, anchor, params[i]);
-        }
-    }
+    //Point anchor = Point(-1, -1);
+    //Mat kernel = Mat();
+    //for (int i = 0; i < params.size(); i++) {
+    //    if (params[i] < 0) {
+    //        erode(input, input, kernel, anchor, -params[i]);
+    //    }
+    //    else if (params[i] > 0) {
+    //        dilate(input, input, kernel, anchor, params[i]);
+    //    }
+    //}
     
-    // imshow("Bitwise Res", mask);
-    // imshow("Initial mask", auto_mask);
-    // cv::waitKey(0);
+    // Find contours
+    vector<vector<Point>> contours;
+    vector<Vec4i> hierarchy;
+    findContours(input, contours, hierarchy, RETR_TREE, CHAIN_APPROX_NONE);
+    Mat tmp = Mat::zeros(input.rows, input.cols, CV_8UC3);
+    Scalar color(rand() & 255, rand() & 255, rand() & 255);
+    for (int i = 0; i < contours.size(); i++) {
+        //cout << hierarchy[i][0] << ", " << hierarchy[i][1] << ", " << hierarchy[i][2] << ", " << hierarchy[i][3] << endl;
+        drawContours(tmp, contours, hierarchy[i][0], color, FILLED, 8, hierarchy);
+    }
+    Mat result;
+    std::vector<Mat> channels;
+    split(tmp, channels);
+    threshold(channels[0], result, 100, 255, THRESH_BINARY);
 
-    return mask;
+    return result;
 }
 
 cv::Mat3b getMean(const std::vector<cv::Mat3b>& images){
@@ -198,6 +209,7 @@ double get_cam_segm_fitness(
 
     // Get mask fitness by comparing to manually-created mask
     Mat xor_thresh;
+    
     bitwise_xor(result, manual_mask, xor_thresh);
     if (show) {
         imshow("Manual", manual_mask);
