@@ -113,8 +113,8 @@ cv::Mat Dilation(int dilation_elem, int dilation_size, cv::Mat& src)
 
 Mat getPostProcessed(Mat input, vector<int> params) {
     // Execute dilation/erosion sequence according to given parameters.
-    // Positive numbers correspond to dilation iterations, negative to erosion iterations.
-    // Zero values mean that neither dilation nor erosion are applied.
+    // Positive numbers correspond to dilation, negative to erosion.
+    // Zero values mean that neither dilation nor erosion is applied.
     //Point anchor = Point(-1, -1);
     //Mat kernel = Mat();
     //for (int i = 0; i < params.size(); i++) {
@@ -205,11 +205,11 @@ double get_cam_segm_fitness(
     Mat auto_mask = cam->getForegroundImage();
 
     // Execute post processing steps
-    Mat result = getPostProcessed(auto_mask, post_params);
+    //Mat result = getPostProcessed(auto_mask, post_params);
+    Mat result = auto_mask;
 
     // Get mask fitness by comparing to manually-created mask
     Mat xor_thresh;
-    
     bitwise_xor(result, manual_mask, xor_thresh);
     if (show) {
         imshow("Manual", manual_mask);
@@ -225,10 +225,10 @@ double get_cam_segm_fitness(
 
 std::vector<vector<int>> get_bg_segm_params(std::vector<Camera*> m_cam_views, Scene3DRenderer scene3d) {
     // Hyperparameters
-    int iteration_threshold = 20;
+    int iteration_threshold = 100;
     float convergence_velocity = 1.5f;
     float stdev_multiplier = 2.0f;
-    float stdev_multiplier_minimum = 0.00001f;
+    float stdev_multiplier_minimum = 0.0001f;
     vector<int> post_iteration_range = { -5, 5 };
 
     // Initial values
