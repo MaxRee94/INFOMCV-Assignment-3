@@ -13,6 +13,7 @@
 #include <opencv2/imgproc/types_c.h>
 #include <stddef.h>
 #include <string>
+#include <algorithm>
 #include <iostream>
 
 #include "../utilities/General.h"
@@ -99,7 +100,7 @@ Scene3DRenderer::~Scene3DRenderer()
 /**
  * Process the current frame on each camera
  */
-bool Scene3DRenderer::processFrame(bool use_post_processing)
+bool Scene3DRenderer::processFrame()
 {
 	for (size_t c = 0; c < m_cameras.size(); ++c)
 	{
@@ -133,21 +134,17 @@ void Scene3DRenderer::initPostProcessed(Mat input, Camera* camera) {
 	//}
 
 	// Find contours
-	vector<vector<Point>> contours;
-	vector<Vec4i> hierarchy;
 	findContours(input, contours, hierarchy, RETR_TREE, CHAIN_APPROX_NONE);
-	Mat tmp = Mat::zeros(input.rows, input.cols, CV_8UC3);
-	Scalar color(rand() & 255, rand() & 255, rand() & 255);
-	for (int i = 0; i < contours.size(); i++) {
+//#pragma omp parallel for schedule(guided)
+	for (int i = 0; i < min(int(contours.size()), 3); i++) {
 		//cout << hierarchy[i][0] << ", " << hierarchy[i][1] << ", " << hierarchy[i][2] << ", " << hierarchy[i][3] << endl;
-		drawContours(tmp, contours, hierarchy[i][0], color, FILLED, 8, hierarchy);
+		drawContours(tmp, contours, hierarchy[i][0], white, FILLED, 8, hierarchy);
 	}
-	Mat result;
-	std::vector<Mat> channels;
-	split(tmp, channels);
-	threshold(channels[0], result, 100, 255, THRESH_BINARY);
+	//split(tmp, channels);
+	//threshold(channels[0], result, 100, 255, THRESH_BINARY);
 
-	camera->setForegroundImage(result);
+	//camera->setForegroundImage(result);
+	camera->setForegroundImage(input); // TODO: UNCOMMENT ABOVE AND REMOVE THIS LINE
 }
 
 

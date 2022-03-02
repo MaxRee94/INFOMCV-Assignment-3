@@ -71,6 +71,12 @@ class Scene3DRenderer
 	int m_pv_threshold;                       // Value threshold value at previous iteration (update awareness)
 
 	std::vector<int> post_proc_params;		  // Post-processing parameters
+	std::vector<std::vector<cv::Point>> contours;
+	std::vector<cv::Vec4i> hierarchy;
+	cv::Mat tmp = cv::Mat::zeros(486, 644, CV_8UC3);
+	cv::Scalar white = cv::Scalar(rand() & 255, rand() & 255, rand() & 255);
+	cv::Mat result;
+	std::vector<cv::Mat> channels;
 
 	// edge points of the virtual ground floor grid
 	std::vector<std::vector<cv::Point3i*> > m_floor_grid;
@@ -91,7 +97,7 @@ public:
 
 	void initPostProcessed(cv::Mat, Camera*);
 
-	bool processFrame(bool = false);
+	bool processFrame();
 	void setCamera(
 			int);
 	void setTopView();
