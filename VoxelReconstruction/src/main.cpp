@@ -26,8 +26,6 @@ int dilation_size = 0;
 
 double inside_mask_weight = 8.0;
 
-double voxels_amount = 1048576.0;
-
 vector<int> img_size = { 644, 486 };
 
 int const max_elem = 2;
@@ -200,14 +198,14 @@ vector<vector<int>> get_updated_voxels(Scene3DRenderer* scene3d) {
 double assess_foregrounds(Scene3DRenderer* scene3d, vector<vector<int>>* manual_visible_voxels) {
     vector<vector<int>> auto_visible_voxels = get_updated_voxels(scene3d);
     int overlapping = 0;
-    for (int i = 0; i < auto_visible_voxels.size(); i++) {
-        for (int j = 0; j < manual_visible_voxels->size(); j++) {
-            if (manual_visible_voxels->at(j) == auto_visible_voxels[i]) {
+    for (int i = 0; i < manual_visible_voxels->size(); i++) {
+        for (int j = 0; j < auto_visible_voxels.size(); j++) {
+            if (manual_visible_voxels->at(i) == auto_visible_voxels[j]) {
                 overlapping++;
             }
         }
     }
-    double fitness = overlapping / voxels_amount;
+    double fitness = overlapping / scene3d->getReconstructor().get_number_of_voxels();
     return fitness;
 }
 
@@ -399,7 +397,7 @@ int main(int argc, char** argv){
 
         // Tune background segmentation parameters
         vector<Camera*> m_cam_views = vr.get_cam_views();
-        Scene3DRenderer scene3d = vr.run(argc, argv, {0, 0, 0}, false, false, false);
+        Scene3DRenderer scene3d = vr.run(argc, argv, {0, 0, 0}, false, false, true);
         vector<vector<int>> bg_segm_params = get_bg_segm_params(m_cam_views, &scene3d);
         //waitKey();
         // Run without manual slider interface, using auto-generated foregrounds

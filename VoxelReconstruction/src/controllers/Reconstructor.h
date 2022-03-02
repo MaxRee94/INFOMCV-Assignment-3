@@ -76,6 +76,10 @@ public:
 		return m_voxels;
 	}
 
+	int get_number_of_voxels() {
+		return m_voxels_amount;
+	}
+
 	void setVisibleVoxels(
 			const std::vector<Voxel*>& visibleVoxels)
 	{
