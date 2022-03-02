@@ -70,6 +70,14 @@ class Scene3DRenderer
 	int m_v_threshold;                        // Value threshold number for background subtraction
 	int m_pv_threshold;                       // Value threshold value at previous iteration (update awareness)
 
+	std::vector<int> post_proc_params;		  // Post-processing parameters
+	std::vector<std::vector<cv::Point>> contours;
+	std::vector<cv::Vec4i> hierarchy;
+	cv::Mat tmp = cv::Mat::zeros(486, 644, CV_8UC3);
+	cv::Scalar white = cv::Scalar(rand() & 255, rand() & 255, rand() & 255);
+	cv::Mat result;
+	std::vector<cv::Mat> channels;
+
 	int rValue;                        // r channel value
 	int gValue;                        // g channel value
 	int bValue;                        // b channel value
@@ -95,6 +103,8 @@ public:
 
 	void processForeground(
 			Camera*);
+
+	void initPostProcessed(cv::Mat, Camera*);
 
 	bool processFrame();
 	void setCamera(
@@ -398,6 +408,12 @@ public:
 			int threshold)
 	{
 		m_h_threshold = threshold;
+	}
+
+	void setPostProcParams(
+		std::vector<int> params
+	) {
+		post_proc_params = params;
 	}
 
 	void setSThreshold(

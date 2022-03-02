@@ -13,6 +13,7 @@
 #include <opencv2/imgproc/types_c.h>
 #include <stddef.h>
 #include <string>
+#include <algorithm>
 #include <iostream>
 
 #include "../utilities/General.h"
@@ -93,9 +94,8 @@ Scene3DRenderer::Scene3DRenderer(
 		createTrackbar("S", VIDEO_WINDOW, &m_s_threshold, 255);
 		createTrackbar("V", VIDEO_WINDOW, &m_v_threshold, 255);
 
-		createFloorGrid();
-		setTopView();
-	}
+	createFloorGrid();
+	setTopView();
 }
 
 /**
@@ -130,18 +130,48 @@ bool Scene3DRenderer::processFrame()
 	return true;
 }
 
+void Scene3DRenderer::initPostProcessed(Mat input, Camera* camera) {
+	// Execute dilation/erosion sequence according to given parameters.
+	// Positive numbers correspond to dilation, negative to erosion.
+	// Zero values mean that neither dilation nor erosion is applied.
+	//Point anchor = Point(-1, -1);
+	//Mat kernel = Mat();
+	//for (int i = 0; i < post_proc_params.size(); i++) {
+	//    if (post_proc_params[i] < 0) {
+	//        erode(input, input, kernel, anchor, -post_proc_params[i]);
+	//    }
+	//    else if (post_proc_params[i] > 0) {
+	//        dilate(input, input, kernel, anchor, post_proc_params[i]);
+	//    }
+	//}
+
+	// Find contours
+	findContours(input, contours, hierarchy, RETR_TREE, CHAIN_APPROX_NONE);
+//#pragma omp parallel for schedule(guided)
+	for (int i = 0; i < min(int(contours.size()), 3); i++) {
+		//cout << hierarchy[i][0] << ", " << hierarchy[i][1] << ", " << hierarchy[i][2] << ", " << hierarchy[i][3] << endl;
+		drawContours(tmp, contours, hierarchy[i][0], white, FILLED, 8, hierarchy);
+	}
+	//split(tmp, channels);
+	//threshold(channels[0], result, 100, 255, THRESH_BINARY);
+
+	//camera->setForegroundImage(result);
+	camera->setForegroundImage(input); // TODO: UNCOMMENT ABOVE AND REMOVE THIS LINE
+}
+
+
 /**
  * Separate the background from the foreground
  * ie.: Create an 8 bit image where only the foreground of the scene is white (255)
  */
 void Scene3DRenderer::processForeground(
-		Camera* camera)
+	Camera* camera)
 {
 	assert(!camera->getFrame().empty());
 	Mat hsv_image;
 	cvtColor(camera->getFrame(), hsv_image, CV_BGR2HSV);  // from BGR to HSV color space
 
-	imshow("hsv img", hsv_image);
+	//imshow("hsv img", hsv_image);
 	//std::cout << "Using hsv thresholds: " << m_h_threshold << ", " << m_s_threshold << ", " << m_v_threshold << std::endl;
 
 	vector<Mat> channels;
@@ -162,8 +192,8 @@ void Scene3DRenderer::processForeground(
 	threshold(tmp, background, m_v_threshold, 255, CV_THRESH_BINARY);
 	bitwise_or(foreground, background, foreground);
 
-	// Improve the foreground image
-	camera->setForegroundImage(foreground);
+	// Post processing
+	initPostProcessed(foreground, camera);
 }
 
 /**

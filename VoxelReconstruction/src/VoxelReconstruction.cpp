@@ -110,7 +110,7 @@ namespace nl_uu_science_gmt
 	 * - Run it!
 	 */
 	Scene3DRenderer VoxelReconstruction::run(
-		int argc, char** argv, bool show_glut, bool manual_hsv
+		int argc, char** argv, bool show_glut, bool manual_hsv, bool init_voxels
 	)
 	{
 		for (int v = 0; v < m_cam_views_amount; ++v)
@@ -125,14 +125,11 @@ namespace nl_uu_science_gmt
 		destroyAllWindows();
 		namedWindow(VIDEO_WINDOW, CV_WINDOW_KEEPRATIO);
 
-		bool init_voxels = manual_hsv;
-
 		Reconstructor reconstructor(m_cam_views, init_voxels);
 		Scene3DRenderer scene3d(reconstructor, m_cam_views, manual_hsv);
 
 		if (show_glut) {
 			Glut glut(scene3d);
-
 #ifdef __linux__
 			glut.initializeLinux(SCENE_WINDOW.c_str(), argc, argv);
 #elif defined _WIN32

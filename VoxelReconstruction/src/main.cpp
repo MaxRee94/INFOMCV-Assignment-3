@@ -111,39 +111,6 @@ cv::Mat Dilation(int dilation_elem, int dilation_size, cv::Mat& src)
 //}
 
 
-Mat getPostProcessed(Mat input, vector<int> params) {
-    // Execute dilation/erosion sequence according to given parameters.
-    // Positive numbers correspond to dilation, negative to erosion.
-    // Zero values mean that neither dilation nor erosion is applied.
-    //Point anchor = Point(-1, -1);
-    //Mat kernel = Mat();
-    //for (int i = 0; i < params.size(); i++) {
-    //    if (params[i] < 0) {
-    //        erode(input, input, kernel, anchor, -params[i]);
-    //    }
-    //    else if (params[i] > 0) {
-    //        dilate(input, input, kernel, anchor, params[i]);
-    //    }
-    //}
-    
-    // Find contours
-    vector<vector<Point>> contours;
-    vector<Vec4i> hierarchy;
-    findContours(input, contours, hierarchy, RETR_TREE, CHAIN_APPROX_NONE);
-    Mat tmp = Mat::zeros(input.rows, input.cols, CV_8UC3);
-    Scalar color(rand() & 255, rand() & 255, rand() & 255);
-    for (int i = 0; i < contours.size(); i++) {
-        //cout << hierarchy[i][0] << ", " << hierarchy[i][1] << ", " << hierarchy[i][2] << ", " << hierarchy[i][3] << endl;
-        drawContours(tmp, contours, hierarchy[i][0], color, FILLED, 8, hierarchy);
-    }
-    Mat result;
-    std::vector<Mat> channels;
-    split(tmp, channels);
-    threshold(channels[0], result, 100, 255, THRESH_BINARY);
-
-    return result;
-}
-
 cv::Mat3b getMean(const std::vector<cv::Mat3b>& images){
     if (images.empty()) return cv::Mat3b();
 
@@ -190,30 +157,22 @@ std::vector<Mat> get_manual_masks(std::vector<Camera*> m_cam_views) {
 }
 
 double get_cam_segm_fitness(
-    std::vector<int> hsv_params, std::vector<Camera*> m_cam_views, int cam_idx, Scene3DRenderer scene3d,
+    std::vector<int> hsv_params, std::vector<Camera*> m_cam_views, int cam_idx, Scene3DRenderer* scene3d,
     double total_pix, std::vector<Mat> manual_masks, std::vector<int> post_params, bool show = false
 ) {
     // Get camera and corresponding manual mask
     Camera* cam = m_cam_views[cam_idx];
     Mat manual_mask = manual_masks[cam_idx];
 
-    // Process foreground using new HSV values
-    scene3d.setHThreshold(hsv_params[0]);
-    scene3d.setSThreshold(hsv_params[1]);
-    scene3d.setVThreshold(hsv_params[2]);
-    scene3d.processForeground(cam);
-    Mat auto_mask = cam->getForegroundImage();
-
-    // Execute post processing steps
-    //Mat result = getPostProcessed(auto_mask, post_params);
-    Mat result = auto_mask;
+    // Get automatically generated mask
+    scene3d->processForeground(cam);
+    Mat result = cam->getForegroundImage();
 
     // Get mask fitness by comparing to manually-created mask
     Mat xor_thresh;
     bitwise_xor(result, manual_mask, xor_thresh);
     if (show) {
         imshow("Manual", manual_mask);
-        imshow("Auto Raw", auto_mask);
         imshow("Post-processed", result);
         imshow("Xor thresh", xor_thresh);
     }
@@ -223,7 +182,7 @@ double get_cam_segm_fitness(
     return fitness;
 }
 
-std::vector<vector<int>> get_bg_segm_params(std::vector<Camera*> m_cam_views, Scene3DRenderer scene3d) {
+std::vector<vector<int>> get_bg_segm_params(std::vector<Camera*> m_cam_views, Scene3DRenderer* scene3d) {
     // Hyperparameters
     int iteration_threshold = 100;
     float convergence_velocity = 1.5f;
@@ -283,6 +242,12 @@ std::vector<vector<int>> get_bg_segm_params(std::vector<Camera*> m_cam_views, Sc
             post_sample.push_back(post_element);
         }
 
+        // Set HSV values and post proc params on Scene3dRenderer
+        scene3d->setHThreshold(hsv_sample[0]);
+        scene3d->setSThreshold(hsv_sample[1]);
+        scene3d->setVThreshold(hsv_sample[2]);
+        scene3d->setPostProcParams(post_sample);
+
         // Test segmentation fitness values for all cameras
         fitnesses.clear();
         for (int c = 0; c < m_cam_views.size(); c++) {
@@ -328,7 +293,7 @@ std::vector<vector<int>> get_bg_segm_params(std::vector<Camera*> m_cam_views, Sc
     std::cout << "Best fitness: " << best_fitness << " after " << j << " iterations." << std::endl;
     std::cout << "Found hsv optima: H " << hsv_optima[0] << " S " << hsv_optima[1] << " V " << hsv_optima[2] << std::endl;
     std::cout << "Found post-processing optima: " << post_optima[0] << ", " << post_optima[1];
-    waitKey();
+    //waitKey();
 
     return { hsv_optima, post_optima };
 }
@@ -378,20 +343,22 @@ int main(int argc, char** argv){
                 cv::imwrite(DATA_PATH + "cam"s + std::to_string(camera) + "/"s + General::BackgroundImageFile, meanImage);
             }
 		}
-        if (argv[1] == "-s"s || argv[1] == "--segmentation"s) {
-            // VoxelReconstruction::showKeys();
+        else if (argv[1] == "-m"s || argv[1] == "--manual"s) {
+            VoxelReconstruction::showKeys();
             VoxelReconstruction vr(DATA_PATH, 4);
-
-            std::vector<Camera*> m_cam_views = vr.get_cam_views();
-            Scene3DRenderer scene3d = vr.run(argc, argv, false, false);
-            std::vector<vector<int>> bg_segm_params = get_bg_segm_params(m_cam_views, scene3d);
-            //performPostProcessing();
+            vr.run(argc, argv);
         }
 	}
     else {
-        VoxelReconstruction::showKeys();
         VoxelReconstruction vr(DATA_PATH, 4);
-        vr.run(argc, argv);
+
+        // Tune background segmentation parameters
+        std::vector<Camera*> m_cam_views = vr.get_cam_views();
+        Scene3DRenderer scene3d = vr.run(argc, argv, false, false, false);
+        std::vector<vector<int>> bg_segm_params = get_bg_segm_params(m_cam_views, &scene3d);
+
+        // Run without manual slider interface, using auto-generated foregrounds
+        vr.run(argc, argv, true, false, true);
     }
 
 	return EXIT_SUCCESS;
