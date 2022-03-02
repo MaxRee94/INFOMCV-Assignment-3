@@ -187,16 +187,18 @@ void update_cam_foreground(
     //double fitness = 1.0 - (inside_mask_weight*white_pix_inside + white_pix_outside) / total_pix;
 }
 
-vector<vector<int>> get_updated_voxels(Scene3DRenderer* scene3d) {
+vector<vector<int>> get_updated_voxels(Reconstructor* reconstructor) {
     // Get updated voxel model
-    scene3d->getReconstructor().update();
-    vector<vector<int>> auto_visible_voxels = scene3d->getReconstructor().getVisibleVoxelCoords();
+    reconstructor->update();
+    vector<vector<int>> auto_visible_voxels = reconstructor->getVisibleVoxelCoords();
 
     return auto_visible_voxels;
 }
 
-double assess_foregrounds(Scene3DRenderer* scene3d, vector<vector<int>>* manual_visible_voxels) {
-    vector<vector<int>> auto_visible_voxels = get_updated_voxels(scene3d);
+double assess_foregrounds(vector<vector<int>>* manual_visible_voxels,
+    Reconstructor* reconstructor, vector<vector<int>>* all_voxels)
+{
+    vector<vector<int>> auto_visible_voxels = get_updated_voxels(reconstructor);
     int overlapping = 0;
     for (int i = 0; i < manual_visible_voxels->size(); i++) {
         for (int j = 0; j < auto_visible_voxels.size(); j++) {
@@ -205,12 +207,14 @@ double assess_foregrounds(Scene3DRenderer* scene3d, vector<vector<int>>* manual_
             }
         }
     }
-    double fitness = overlapping / scene3d->getReconstructor().get_number_of_voxels();
+    cout << "num of vox: " << reconstructor->get_number_of_voxels() << endl;
+    cout << "overlapping:" << overlapping << endl;
+    double fitness = overlapping / manual_visible_voxels->size();
     return fitness;
 }
 
 vector<vector<int>> get_manual_voxelmodel(
-    Scene3DRenderer* scene3d, vector<Mat> manual_masks, vector<Camera*> m_cam_views
+    Reconstructor* reconstructor, vector<Mat> manual_masks, vector<Camera*> m_cam_views
 ) {
     // Set manual masks as foreground images for all cameras
     for (int c = 0; c < 4; c++) {
@@ -218,7 +222,7 @@ vector<vector<int>> get_manual_voxelmodel(
         cam->setForegroundImage(manual_masks[c]);
     }
 
-    vector<vector<int>> manual_visible_voxels = get_updated_voxels(scene3d);
+    vector<vector<int>> manual_visible_voxels = get_updated_voxels(reconstructor);
 
     return manual_visible_voxels;
 }
@@ -247,7 +251,10 @@ vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRende
     int j = 0;
     vector<float> fitnesses;
     vector<Mat> manual_masks = get_manual_masks(m_cam_views);
-    vector<vector<int>> manual_visible_voxels = get_manual_voxelmodel(scene3d, manual_masks, m_cam_views);
+    Reconstructor reconstructor(m_cam_views, true);
+    vector<vector<int>> all_voxels = reconstructor.getAllVoxelCoords();
+    vector<vector<int>> manual_visible_voxels = get_manual_voxelmodel(&reconstructor, manual_masks, m_cam_views);
+    
 
     // Search loop
     cout << "Starting segmentation parameter tuning..." << endl;
@@ -296,7 +303,7 @@ vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRende
             update_cam_foreground(
                 hsv_sample, m_cam_views, c, scene3d, total_pix, manual_masks, post_sample
             );
-            fitness = assess_foregrounds(scene3d, &manual_visible_voxels);
+            fitness = assess_foregrounds(&manual_visible_voxels, &reconstructor, &all_voxels);
             fitnesses.push_back(fitness);
         }
         avg_fitness = accumulate(fitnesses.begin(), fitnesses.end(), 0.0) / 4.0;
@@ -397,7 +404,7 @@ int main(int argc, char** argv){
 
         // Tune background segmentation parameters
         vector<Camera*> m_cam_views = vr.get_cam_views();
-        Scene3DRenderer scene3d = vr.run(argc, argv, {0, 0, 0}, false, false, true);
+        Scene3DRenderer scene3d = vr.run(argc, argv, {0, 0, 0}, false, false, false);
         vector<vector<int>> bg_segm_params = get_bg_segm_params(m_cam_views, &scene3d);
         //waitKey();
         // Run without manual slider interface, using auto-generated foregrounds

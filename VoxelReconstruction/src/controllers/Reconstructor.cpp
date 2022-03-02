@@ -190,7 +190,7 @@ void Reconstructor::update()
 			visible_voxels.push_back(voxel);
 		}
 	}
-
+	
 	m_visible_voxels.clear();
 	m_visible_voxels.insert(m_visible_voxels.end(), visible_voxels.begin(), visible_voxels.end());
 

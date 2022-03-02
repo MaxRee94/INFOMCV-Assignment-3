@@ -71,6 +71,17 @@ public:
 		return visible_voxel_coords;
 	}
 
+	const std::vector<std::vector<int>> getAllVoxelCoords() const
+	{
+		std::vector<std::vector<int>> voxel_coords;
+		for (int i = 0; i < m_voxels.size(); i++) {
+			Voxel* m_voxel = m_voxels[i];
+			std::vector<int> coords = { m_voxel->x, m_voxel->y, m_voxel->z };
+			voxel_coords.push_back(coords);
+		}
+		return voxel_coords;
+	}
+
 	const std::vector<Voxel*>& getVoxels() const
 	{
 		return m_voxels;
