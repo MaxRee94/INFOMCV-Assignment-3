@@ -200,16 +200,27 @@ double assess_foregrounds(vector<vector<int>>* manual_visible_voxels,
 {
     vector<vector<int>> auto_visible_voxels = get_updated_voxels(reconstructor);
     int overlapping = 0;
-    for (int i = 0; i < manual_visible_voxels->size(); i++) {
-        for (int j = 0; j < auto_visible_voxels.size(); j++) {
-            if (manual_visible_voxels->at(i) == auto_visible_voxels[j]) {
-                overlapping++;
+    double fitness;
+    cout << "number of auto voxels: " << auto_visible_voxels.size() << endl;
+    if (auto_visible_voxels.size() < manual_visible_voxels->size() * 2) {
+        for (int i = 0; i < manual_visible_voxels->size(); i++) {
+            for (int j = 0; j < auto_visible_voxels.size(); j++) {
+                if (manual_visible_voxels->at(i) == auto_visible_voxels[j]) {
+                    overlapping++;
+                }
             }
         }
+        fitness = (double)overlapping / (double)manual_visible_voxels->size() - ((double)(
+            auto_visible_voxels.size() - overlapping) / (double)manual_visible_voxels->size())*0.5;
     }
+    else {
+        fitness = 0.0;
+    }
+
     cout << "num of vox: " << reconstructor->get_number_of_voxels() << endl;
     cout << "overlapping:" << overlapping << endl;
-    double fitness = overlapping / manual_visible_voxels->size();
+    cout << "fitness: " << fitness << endl;
+    
     return fitness;
 }
 
@@ -221,18 +232,19 @@ vector<vector<int>> get_manual_voxelmodel(
         Camera* cam = m_cam_views[c];
         cam->setForegroundImage(manual_masks[c]);
     }
-
+   
     vector<vector<int>> manual_visible_voxels = get_updated_voxels(reconstructor);
+    //cout << "num of voxels in manual model: " << manual_visible_voxels.size() << endl;
 
     return manual_visible_voxels;
 }
 
 vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRenderer* scene3d) {
     // Hyperparameters
-    int iteration_threshold = 100;
-    float convergence_velocity = 1.5f;
+    int iteration_threshold = 40;
+    float convergence_velocity = 1.3f;
     float stdev_multiplier = 2.0f;
-    float stdev_multiplier_minimum = 0.0005f;
+    float stdev_multiplier_minimum = 0.005f;
     vector<int> post_iteration_range = { -5, 5 };
 
     // Initial values
@@ -247,9 +259,7 @@ vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRende
     int hsv_element;
     int post_element;
     double fitness;
-    double avg_fitness;
     int j = 0;
-    vector<float> fitnesses;
     vector<Mat> manual_masks = get_manual_masks(m_cam_views);
     Reconstructor reconstructor(m_cam_views, true);
     vector<vector<int>> all_voxels = reconstructor.getAllVoxelCoords();
@@ -292,25 +302,23 @@ vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRende
         }
 
         // Set HSV values and post proc params on Scene3dRenderer
+        //hsv_sample = { 0, 67, 63 }; // TEMP!!
         scene3d->setHThreshold(hsv_sample[0]);
         scene3d->setSThreshold(hsv_sample[1]);
         scene3d->setVThreshold(hsv_sample[2]);
         scene3d->setPostProcParams(post_sample);
 
         // Test segmentation fitness values for all cameras
-        fitnesses.clear();
         for (int c = 0; c < m_cam_views.size(); c++) {
             update_cam_foreground(
                 hsv_sample, m_cam_views, c, scene3d, total_pix, manual_masks, post_sample
             );
-            fitness = assess_foregrounds(&manual_visible_voxels, &reconstructor, &all_voxels);
-            fitnesses.push_back(fitness);
         }
-        avg_fitness = accumulate(fitnesses.begin(), fitnesses.end(), 0.0) / 4.0;
+        fitness = assess_foregrounds(&manual_visible_voxels, &reconstructor, &all_voxels);
 
         // Update if sample fitness is better than previous best value
-        if (avg_fitness > best_fitness) {
-            best_fitness = avg_fitness;
+        if (fitness > best_fitness) {
+            best_fitness = fitness;
             hsv_optima = hsv_sample;
             post_optima = post_sample;
             dt_since_update = 0;
@@ -319,7 +327,7 @@ vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRende
             dt_since_update++;
         }
 
-        if (j % 10 == 0) {
+        if (j % 2 == 0) {
             cout << "  iteration: " << j << ". stdev_multiplier: " << stdev_multiplier << ".\n";
         }
 
