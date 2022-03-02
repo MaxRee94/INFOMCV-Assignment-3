@@ -148,15 +148,24 @@ void Scene3DRenderer::initPostProcessed(Mat input, Camera* camera) {
 	// Find contours
 	int size = 1;
 	cv::Size size_element = cv::Size(2 * size + 1, 2 * size + 1);
-	kernel = cv::getStructuringElement(MORPH_ELLIPSE,
-		size_element,
-		cv::Point(size, size)
-	);
-	findContours(input, contours, hierarchy, RETR_TREE, CHAIN_APPROX_NONE);
-	morphologyEx(input, input, MORPH_OPEN, kernel);
+	findContours(input, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_NONE);
+	//morphologyEx(input, input, MORPH_OPEN, kernel);
+	int cont_size_thresh = 800;
+	int largest = 0;
+	int largest_idx;
 	for (int i = 0; i < contours.size(); i++) {
-		
+		if (contourArea(contours[i]) > largest) {
+			largest_idx = i;
+			largest = contourArea(contours[i]);
+		}
 	}
+	for (int i = 0; i < contours.size(); i++) {
+		if (contourArea(contours[i]) < cont_size_thresh && i != largest_idx) {
+			drawContours(input, contours, hierarchy[i][1], white, FILLED, 8, hierarchy);
+		}
+	}
+	
+	threshold(input, input, 100, 255, CV_THRESH_BINARY);
 
 	camera->setForegroundImage(input);
 }
