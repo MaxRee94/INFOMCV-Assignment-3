@@ -41,6 +41,7 @@ Reconstructor::Reconstructor(
 
 	const size_t edge = 2 * m_height;
 	m_voxels_amount = (edge / m_step) * (edge / m_step) * (m_height / m_step);
+	std::cout << "Amnt of voxels: " << m_voxels_amount << std::endl;
 
 	if (init_voxels) {
 		initialize();

@@ -8,11 +8,12 @@
 
 #include "utilities/General.h"
 #include "VoxelReconstruction.h"
+//#include "controllers/Reconstructor.h"
 
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
 
-#define DATA_PATH "data" + std::string(PATH_SEP)
+#define DATA_PATH "data" + string(PATH_SEP)
 
 using namespace nl_uu_science_gmt;
 using namespace std;
@@ -23,7 +24,11 @@ cv::Mat src, erosion_dst, dilation_dst, threshold_dst;
 int dilation_elem = 0;
 int dilation_size = 0;
 
-std::vector<int> img_size = { 644, 486 };
+double inside_mask_weight = 8.0;
+
+double voxels_amount = 1048576.0;
+
+vector<int> img_size = { 644, 486 };
 
 int const max_elem = 2;
 int const max_kernel_size = 21;
@@ -62,7 +67,7 @@ cv::Mat Dilation(int dilation_elem, int dilation_size, cv::Mat& src)
 }
 
 //void performPostProcessing() {
-//    using namespace std::literals;
+//    using namespace literals;
 //    
 //    src = cv::imread(DATA_PATH + "cam1/0.png"s, cv::IMREAD_COLOR);
 //    cv::Mat   hsv_img, mask, gray_img, initial_thresh;
@@ -111,7 +116,7 @@ cv::Mat Dilation(int dilation_elem, int dilation_size, cv::Mat& src)
 //}
 
 
-cv::Mat3b getMean(const std::vector<cv::Mat3b>& images){
+cv::Mat3b getMean(const vector<cv::Mat3b>& images){
     if (images.empty()) return cv::Mat3b();
 
     // Create a 0 initialized image to use as accumulator
@@ -136,8 +141,8 @@ cv::Mat3b getMean(const std::vector<cv::Mat3b>& images){
     return m;
 }
 
-std::vector<Mat> get_manual_masks(std::vector<Camera*> m_cam_views) {
-    std::vector<Mat> manual_masks;
+vector<Mat> get_manual_masks(vector<Camera*> m_cam_views) {
+    vector<Mat> manual_masks;
     for (int c = 0; c < m_cam_views.size(); c++) {
         // Advance cam frame to make sure it contains an active frame
         Camera* cam = m_cam_views[c];
@@ -145,9 +150,9 @@ std::vector<Mat> get_manual_masks(std::vector<Camera*> m_cam_views) {
 
         // Read- and threshold manual mask
         Mat tmp = imread(
-            DATA_PATH + "cam" + std::to_string(c + 1) + std::string(PATH_SEP) + "manual_mask.png"
+            DATA_PATH + "cam" + to_string(c + 1) + string(PATH_SEP) + "manual_mask.png"
         );
-        std::vector<Mat> channels;
+        vector<Mat> channels;
         split(tmp, channels);
         Mat manual_mask;
         threshold(channels[0], manual_mask, 150, 255, THRESH_BINARY);
@@ -156,9 +161,9 @@ std::vector<Mat> get_manual_masks(std::vector<Camera*> m_cam_views) {
     return manual_masks;
 }
 
-double get_cam_segm_fitness(
-    std::vector<int> hsv_params, std::vector<Camera*> m_cam_views, int cam_idx, Scene3DRenderer* scene3d,
-    double total_pix, std::vector<Mat> manual_masks, std::vector<int> post_params, bool show = false
+void update_cam_foreground(
+    vector<int> hsv_params, vector<Camera*> m_cam_views, int cam_idx, Scene3DRenderer* scene3d,
+    double total_pix, vector<Mat> manual_masks, vector<int> post_params, bool show = false
 ) {
     // Get camera and corresponding manual mask
     Camera* cam = m_cam_views[cam_idx];
@@ -168,52 +173,92 @@ double get_cam_segm_fitness(
     scene3d->processForeground(cam);
     Mat result = cam->getForegroundImage();
 
-    // Get mask fitness by comparing to manually-created mask
-    Mat xor_thresh;
-    bitwise_xor(result, manual_mask, xor_thresh);
-    if (show) {
-        imshow("Manual", manual_mask);
-        imshow("Post-processed", result);
-        imshow("Xor thresh", xor_thresh);
-    }
-    double white_pix = static_cast<double>(cv::countNonZero(xor_thresh));
-    double fitness = 1.0 - white_pix / total_pix;
+    //// Get mask fitness by comparing to manually-created mask
+    //Mat xor_thresh, xor_inside_mask;
+    //bitwise_xor(result, manual_mask, xor_thresh);
+    //bitwise_and(manual_mask, xor_thresh, xor_inside_mask);
+    //if (show) {
+    //    imshow("Manual", manual_mask);
+    //    imshow("Post-processed", result);
+    //    imshow("Xor thresh", xor_thresh);
+    //    imshow("Xor inside mask", xor_inside_mask);
+    //}
+    //double white_pix = static_cast<double>(cv::countNonZero(xor_thresh));
+    //double white_pix_inside = static_cast<double>(cv::countNonZero(xor_inside_mask));
+    //double white_pix_outside = white_pix - white_pix_inside;
+    //double fitness = 1.0 - (inside_mask_weight*white_pix_inside + white_pix_outside) / total_pix;
+}
 
+vector<vector<int>> get_updated_voxels(Scene3DRenderer* scene3d) {
+    // Get updated voxel model
+    Reconstructor reconstructor = scene3d->getReconstructor();
+    reconstructor.update();
+    vector<vector<int>> auto_visible_voxels = reconstructor.getVisibleVoxelCoords();
+
+    return auto_visible_voxels;
+}
+
+double assess_foregrounds(Scene3DRenderer* scene3d, vector<vector<int>>* manual_visible_voxels) {
+    vector<vector<int>> auto_visible_voxels = get_updated_voxels(scene3d);
+    int overlapping = 0;
+    for (int i = 0; i < auto_visible_voxels.size(); i++) {
+        for (int j = 0; j < manual_visible_voxels->size(); j++) {
+            if (manual_visible_voxels->at(j) == auto_visible_voxels[i]) {
+                overlapping++;
+            }
+        }
+    }
+    double fitness = overlapping / voxels_amount;
     return fitness;
 }
 
-std::vector<vector<int>> get_bg_segm_params(std::vector<Camera*> m_cam_views, Scene3DRenderer* scene3d) {
+vector<vector<int>> get_manual_voxelmodel(
+    Scene3DRenderer* scene3d, vector<Mat> manual_masks, vector<Camera*> m_cam_views
+) {
+    // Set manual masks as foreground images for all cameras
+    for (int c = 0; c < 4; c++) {
+        Camera* cam = m_cam_views[c];
+        cam->setForegroundImage(manual_masks[c]);
+    }
+
+    vector<vector<int>> manual_visible_voxels = get_updated_voxels(scene3d);
+
+    return manual_visible_voxels;
+}
+
+vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRenderer* scene3d) {
     // Hyperparameters
     int iteration_threshold = 100;
     float convergence_velocity = 1.5f;
     float stdev_multiplier = 2.0f;
-    float stdev_multiplier_minimum = 0.0001f;
+    float stdev_multiplier_minimum = 0.0005f;
     vector<int> post_iteration_range = { -5, 5 };
 
     // Initial values
-    std::vector<int> hsv_optima = { 128, 128, 128 }; // Start with mean values (255/2)
-    std::vector<int> post_optima = { 0, 0 }; // Start with mean values (neither dilation nor erosion)
+    vector<int> hsv_optima = { 128, 128, 128 }; // Start with mean values (255/2)
+    vector<int> post_optima = { 0, 0 }; // Start with mean values (neither dilation nor erosion)
     int dt_since_update = 0;
     double total_pix = static_cast<double>(img_size[0] * img_size[1]);
     double best_fitness = 0.0;
-    std::vector<int> hsv_sample;
-    std::vector<int> post_sample;
-    std::default_random_engine gen;
+    vector<int> hsv_sample;
+    vector<int> post_sample;
+    default_random_engine gen;
     int hsv_element;
     int post_element;
     double fitness;
     double avg_fitness;
     int j = 0;
-    std::vector<float> fitnesses;
-    std::vector<Mat> manual_masks = get_manual_masks(m_cam_views);
+    vector<float> fitnesses;
+    vector<Mat> manual_masks = get_manual_masks(m_cam_views);
+    vector<vector<int>> manual_visible_voxels = get_manual_voxelmodel(scene3d, manual_masks, m_cam_views);
 
     // Search loop
-    std::cout << "Starting segmentation parameter tuning..." << std::endl;
+    cout << "Starting segmentation parameter tuning..." << endl;
     while (true) {
         // Sample HSV space
         hsv_sample.clear();
         for (int i = 0; i < 3; i++) {
-            std::normal_distribution<float> distr(hsv_optima[i], stdev_multiplier * 255.0f);
+            normal_distribution<float> distr(hsv_optima[i], stdev_multiplier * 255.0f);
             hsv_element = distr(gen);
 
             // Clamp values to interval [0, 255]
@@ -229,7 +274,7 @@ std::vector<vector<int>> get_bg_segm_params(std::vector<Camera*> m_cam_views, Sc
         // Sample space of possible combinations of post-processing steps
         post_sample.clear();
         for (int i = 0; i < post_optima.size(); i++) {
-            std::normal_distribution<float> distr(post_optima[i], stdev_multiplier * post_iteration_range[1]);
+            normal_distribution<float> distr(post_optima[i], stdev_multiplier * post_iteration_range[1]);
             post_element = distr(gen);
 
             // Clamp values to post_iteration_range
@@ -251,12 +296,13 @@ std::vector<vector<int>> get_bg_segm_params(std::vector<Camera*> m_cam_views, Sc
         // Test segmentation fitness values for all cameras
         fitnesses.clear();
         for (int c = 0; c < m_cam_views.size(); c++) {
-            fitness = get_cam_segm_fitness(
+            update_cam_foreground(
                 hsv_sample, m_cam_views, c, scene3d, total_pix, manual_masks, post_sample
             );
+            fitness = assess_foregrounds(scene3d, &manual_visible_voxels);
             fitnesses.push_back(fitness);
         }
-        avg_fitness = std::accumulate(fitnesses.begin(), fitnesses.end(), 0.0) / 4.0;
+        avg_fitness = accumulate(fitnesses.begin(), fitnesses.end(), 0.0) / 4.0;
 
         // Update if sample fitness is better than previous best value
         if (avg_fitness > best_fitness) {
@@ -270,7 +316,7 @@ std::vector<vector<int>> get_bg_segm_params(std::vector<Camera*> m_cam_views, Sc
         }
 
         if (j % 10 == 0) {
-            std::cout << "  iteration: " << j << ". stdev_multiplier: " << stdev_multiplier << ".\n";
+            cout << "  iteration: " << j << ". stdev_multiplier: " << stdev_multiplier << ".\n";
         }
 
         // Decrease standard deviation to favor samples close to current optima
@@ -278,7 +324,7 @@ std::vector<vector<int>> get_bg_segm_params(std::vector<Camera*> m_cam_views, Sc
 
         // Stop searching if no updates have occurred for a set number of iterations
         if (dt_since_update > iteration_threshold) {
-            std::cout << "Finished segmentation parameter tuning." << std::endl;
+            cout << "Finished segmentation parameter tuning." << endl;
             break;
         }
 
@@ -286,30 +332,30 @@ std::vector<vector<int>> get_bg_segm_params(std::vector<Camera*> m_cam_views, Sc
     }
 
     for (int c = 0; c < m_cam_views.size(); c++) {
-        double fitness = get_cam_segm_fitness(
+        update_cam_foreground(
             hsv_optima, m_cam_views, c, scene3d, total_pix, manual_masks, post_optima, true
         );
     }
-    std::cout << "Best fitness: " << best_fitness << " after " << j << " iterations." << std::endl;
-    std::cout << "Found hsv optima: H " << hsv_optima[0] << " S " << hsv_optima[1] << " V " << hsv_optima[2] << std::endl;
-    std::cout << "Found post-processing optima: " << post_optima[0] << ", " << post_optima[1];
+    cout << "Best fitness: " << best_fitness << " after " << j << " iterations." << endl;
+    cout << "Found hsv optima: H " << hsv_optima[0] << " S " << hsv_optima[1] << " V " << hsv_optima[2] << endl;
+    cout << "Found post-processing optima: " << post_optima[0] << ", " << post_optima[1];
     //waitKey();
 
     return { hsv_optima, post_optima };
 }
 
 int main(int argc, char** argv){
-	using namespace std::literals;
+	using namespace literals;
 
 	if (argc > 1) {
 		if (argv[1] == "-b"s || argv[1] == "--background"s) {
-			std::cout << "Starting mean background image calculation..." << std::endl;
+			cout << "Starting mean background image calculation..." << endl;
 
             cv::Mat frame, gray;
             // vector to store the pixel coordinates of detected checker board corners 
-            std::vector<cv::Point2f> corner_pts;
+            vector<cv::Point2f> corner_pts;
             bool success;
-            std::vector<cv::Mat3b> images;
+            vector<cv::Mat3b> images;
 
             // Loop over each camera to create the background image file
             for (size_t camera = 1; camera < 5; camera++)
@@ -317,10 +363,10 @@ int main(int argc, char** argv){
                 images.clear();
 
                 // Looping over all the frames in the movie file
-                cv::VideoCapture cap(DATA_PATH + "cam"s + std::to_string(camera) + "/"s + General::BackgroundVideoFile);
+                cv::VideoCapture cap(DATA_PATH + "cam"s + to_string(camera) + "/"s + General::BackgroundVideoFile);
                 int i = 0;
                 int frameStep = 20;
-                std::cout << "Looping over every " << frameStep << "th frame of " << cap.get(cv::CAP_PROP_FRAME_COUNT) << " total." << std::endl;
+                cout << "Looping over every " << frameStep << "th frame of " << cap.get(cv::CAP_PROP_FRAME_COUNT) << " total." << endl;
                 int usedImages = 0;
 
                 for (int i = 0; i < cap.get(cv::CAP_PROP_FRAME_COUNT); i++) {
@@ -340,7 +386,7 @@ int main(int argc, char** argv){
                 // Show result
                 cv::imshow("Mean image", meanImage);
                 cv::waitKey();
-                cv::imwrite(DATA_PATH + "cam"s + std::to_string(camera) + "/"s + General::BackgroundImageFile, meanImage);
+                cv::imwrite(DATA_PATH + "cam"s + to_string(camera) + "/"s + General::BackgroundImageFile, meanImage);
             }
 		}
         else if (argv[1] == "-m"s || argv[1] == "--manual"s) {
@@ -353,10 +399,10 @@ int main(int argc, char** argv){
         VoxelReconstruction vr(DATA_PATH, 4);
 
         // Tune background segmentation parameters
-        std::vector<Camera*> m_cam_views = vr.get_cam_views();
+        vector<Camera*> m_cam_views = vr.get_cam_views();
         Scene3DRenderer scene3d = vr.run(argc, argv, {0, 0, 0}, false, false, false);
-        std::vector<vector<int>> bg_segm_params = get_bg_segm_params(m_cam_views, &scene3d);
-
+        vector<vector<int>> bg_segm_params = get_bg_segm_params(m_cam_views, &scene3d);
+        //waitKey();
         // Run without manual slider interface, using auto-generated foregrounds
         vr.run(argc, argv, bg_segm_params[0], true, false, true);
     }
