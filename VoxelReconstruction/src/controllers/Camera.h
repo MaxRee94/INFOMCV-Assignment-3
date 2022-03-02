@@ -74,6 +74,7 @@ public:
 
 	static cv::Point projectOnView(const cv::Point3f &, const cv::Mat &, const cv::Mat &, const cv::Mat &, const cv::Mat &);
 	cv::Point projectOnView(const cv::Point3f &);
+	cv::Mat m_colored_frame;
 
 	const std::string& getCamPropertiesFile() const
 	{
