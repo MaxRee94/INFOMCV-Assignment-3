@@ -70,6 +70,15 @@ class Scene3DRenderer
 	int m_v_threshold;                        // Value threshold number for background subtraction
 	int m_pv_threshold;                       // Value threshold value at previous iteration (update awareness)
 
+	int rValue;                        // r channel value
+	int gValue;                        // g channel value
+	int bValue;                        // b channel value
+	int prValue;                        // previous r channel value
+	int pgValue;                        // previous g channel value
+	int pbValue;                        // previous b channel value
+
+
+
 	// edge points of the virtual ground floor grid
 	std::vector<std::vector<cv::Point3i*> > m_floor_grid;
 
@@ -411,6 +420,78 @@ public:
 	int getSquareSideLen() const
 	{
 		return m_square_side_len;
+	}
+
+
+	/*
+	 * COLORING ADDITIONS
+	 */
+
+	double getRChannel() const
+	{
+		return (double)rValue/255;
+	}
+
+	double getGChannel() const
+	{
+		return (double)gValue / 255;
+	}
+
+	double getBChannel() const
+	{
+		return (double)bValue / 255;
+	}
+
+	void setRChannel(
+		int rChannel)
+	{
+		rValue = rChannel;
+	}
+
+	void setGChannel(
+		int gChannel)
+	{
+		gValue = gChannel;
+	}
+
+	void setBChannel(
+		int bChannel)
+	{
+		bValue = bChannel;
+	}
+
+
+	int getPRChannel() const
+	{
+		return prValue;
+	}
+
+	int getPGChannel() const
+	{
+		return pgValue;
+	}
+
+	int getPBChannel() const
+	{
+		return pbValue;
+	}
+
+	void setPRChannel(
+		int rChannel)
+	{
+		prValue = rChannel;
+	}
+
+	void setPGChannel(
+		int gChannel)
+	{
+		pgValue = gChannel;
+	}
+
+	void setPBChannel(
+		int bChannel)
+	{
+		pbValue = bChannel;
 	}
 };
 

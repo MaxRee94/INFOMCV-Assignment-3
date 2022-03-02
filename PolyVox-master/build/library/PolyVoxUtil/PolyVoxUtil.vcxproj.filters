@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\jimiu\Desktop\INFOMCV-Assignment-2\PolyVox-master\library\PolyVoxUtil\source\Dummy.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="C:\Users\jimiu\Desktop\INFOMCV-Assignment-2\PolyVox-master\library\PolyVoxUtil\include\PolyVoxUtil\Serialization.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\jimiu\Desktop\INFOMCV-Assignment-2\PolyVox-master\library\PolyVoxUtil\include\PolyVoxUtil\Serialization.inl">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\jimiu\Desktop\INFOMCV-Assignment-2\PolyVox-master\library\PolyVoxUtil\include\PolyVoxUtil\VolumeChangeTracker.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\jimiu\Desktop\INFOMCV-Assignment-2\PolyVox-master\library\PolyVoxUtil\include\PolyVoxUtil\VolumeChangeTracker.inl">
+      <Filter>Headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\jimiu\Desktop\INFOMCV-Assignment-2\PolyVox-master\library\PolyVoxUtil\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Headers">
+      <UniqueIdentifier>{F3C5BC0E-05F6-318E-9CEC-0CD220481223}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sources">
+      <UniqueIdentifier>{CB7C32BC-1A9E-37C5-A054-7C0077D4CD3A}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

@@ -184,6 +184,20 @@ void Camera::onMouse(
 				m_BoardCorners->pop_back();
 			}
 		}
+		else if (flags == (EVENT_FLAG_LBUTTON + EVENT_FLAG_SHIFTKEY) && m_BoardCorners->size() % 2 == 1) {
+			m_BoardCorners->push_back(Point(x, y));
+			int size = m_BoardCorners->size();
+			int new_x, new_y;
+			double diff;
+
+			for (size_t i = 1; i < 5; i++){
+				diff = i / 5.0;
+				new_x = (m_BoardCorners->at(size - 1).x * (1 - diff)) + (m_BoardCorners->at(size - 2).x * diff);
+				new_y = (m_BoardCorners->at(size - 1).y * (1 - diff)) + (m_BoardCorners->at(size - 2).y * diff);
+
+				m_BoardCorners->push_back(Point(new_x, new_y));
+			}
+		}
 		else
 		{
 			m_BoardCorners->push_back(Point(x, y));

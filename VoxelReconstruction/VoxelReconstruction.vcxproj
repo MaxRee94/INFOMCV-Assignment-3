@@ -37,6 +37,9 @@
     <Xml Include="data\checkerboard.xml" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\PolyVox-master\build\library\PolyVoxCore\ALL_BUILD.vcxproj" />
+    <None Include="..\PolyVox-master\build\library\PolyVoxCore\PolyVoxCore.sln" />
+    <None Include="..\PolyVox-master\build\library\PolyVoxCore\PolyVoxCore.vcxproj" />
     <None Include="data\cam1\background.avi" />
     <None Include="data\cam1\checkerboard.avi" />
     <None Include="data\cam1\intrinsics.avi" />
@@ -53,6 +56,14 @@
     <None Include="data\cam4\checkerboard.avi" />
     <None Include="data\cam4\intrinsics.avi" />
     <None Include="data\cam4\video.avi" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PolyVox-master\build\ALL_BUILD.vcxproj">
+      <Project>{298401f6-e56e-366a-b9fb-c16d29fef83f}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\PolyVox-master\build\library\PolyVoxCore\PolyVoxCore.vcxproj">
+      <Project>{966c30a1-657d-34b5-9e74-a6adb56ccede}</Project>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{D024333B-E310-4DFB-B973-F49F08E73EB0}</ProjectGuid>
@@ -97,6 +108,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
+      <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
       <AdditionalDependencies>opencv_world455d.lib;OpenGL32.lib;Glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>

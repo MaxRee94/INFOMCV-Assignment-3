@@ -97,7 +97,7 @@ void Reconstructor::initialize()
 
 	int z;
 	int pdone = 0;
-#pragma omp parallel for schedule(static) private(z) shared(pdone)
+#pragma omp parallel for schedule(guided) private(z) shared(pdone)
 	for (z = zL; z < zR; z += m_step)
 	{
 		const int zp = (z - zL) / m_step;
@@ -157,15 +157,19 @@ void Reconstructor::initialize()
  */
 void Reconstructor::update()
 {
-	m_visible_voxels.clear();
 	std::vector<Voxel*> visible_voxels;
 
 	int v;
-#pragma omp parallel for schedule(static) private(v) shared(visible_voxels)
+#pragma omp parallel for schedule(guided) private(v) shared(visible_voxels)
 	for (v = 0; v < (int) m_voxels_amount; ++v)
 	{
 		int camera_counter = 0;
 		Voxel* voxel = m_voxels[v];
+		/*Voxel* prev_voxel = NULL;
+
+		if (!prev_visible_voxels.empty()) {
+			prev_voxel = prev_visible_voxels[v];
+		}*/
 
 		for (size_t c = 0; c < m_cameras.size(); ++c)
 		{
@@ -186,7 +190,14 @@ void Reconstructor::update()
 		}
 	}
 
+	m_visible_voxels.clear();
 	m_visible_voxels.insert(m_visible_voxels.end(), visible_voxels.begin(), visible_voxels.end());
+
+	//// Clearing previous frame voxel vector
+	//prev_visible_voxels.clear();
+
+	//// Inserting current frame voxels to previous frame voxels to use at the next frame
+	//std::copy(m_voxels.begin(), m_voxels.end(), back_inserter(prev_visible_voxels));
 }
 
 } /* namespace nl_uu_science_gmt */

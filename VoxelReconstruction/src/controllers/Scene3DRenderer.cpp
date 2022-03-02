@@ -76,6 +76,17 @@ Scene3DRenderer::Scene3DRenderer(
 	m_v_threshold = V;
 	m_pv_threshold = V;
 
+	rValue = 128;
+	prValue = rValue;
+	gValue = 128;
+	pgValue = gValue;
+	bValue = 128;
+	pbValue = bValue;
+
+	createTrackbar("R", VIDEO_WINDOW, &rValue, 255);
+	createTrackbar("G", VIDEO_WINDOW, &gValue, 255);
+	createTrackbar("B", VIDEO_WINDOW, &bValue, 255);
+
 	if (manual_hsv) {
 		createTrackbar("Frame", VIDEO_WINDOW, &m_current_frame, m_number_of_frames - 2);
 		createTrackbar("H", VIDEO_WINDOW, &m_h_threshold, 255);

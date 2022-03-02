@@ -613,7 +613,8 @@ void Glut::update(
 		scene3d.setPreviousFrame(scene3d.getCurrentFrame());
 	}
 	else if (scene3d.getHThreshold() != scene3d.getPHThreshold() || scene3d.getSThreshold() != scene3d.getPSThreshold()
-			|| scene3d.getVThreshold() != scene3d.getPVThreshold())
+			|| scene3d.getVThreshold() != scene3d.getPVThreshold() || scene3d.getRChannel() != scene3d.getPRChannel()
+			|| scene3d.getGChannel() != scene3d.getPGChannel() || scene3d.getBChannel() != scene3d.getPBChannel())
 	{
 		// Update the scene if one of the HSV sliders was moved (when the video is paused)
 		scene3d.processFrame();
@@ -622,6 +623,10 @@ void Glut::update(
 		scene3d.setPHThreshold(scene3d.getHThreshold());
 		scene3d.setPSThreshold(scene3d.getSThreshold());
 		scene3d.setPVThreshold(scene3d.getVThreshold());
+
+		scene3d.setPRChannel(scene3d.getRChannel());
+		scene3d.setPGChannel(scene3d.getGChannel());
+		scene3d.setPBChannel(scene3d.getBChannel());
 	}
 
 	// Auto rotate the scene
@@ -855,7 +860,7 @@ void Glut::drawVoxels()
 	vector<Reconstructor::Voxel*> voxels = m_Glut->getScene3d().getReconstructor().getVisibleVoxels();
 	for (size_t v = 0; v < voxels.size(); v++)
 	{
-		glColor4f(0.5f, 0.5f, 0.5f, 0.5f);
+		glColor4f(m_Glut->getScene3d().getRChannel(), m_Glut->getScene3d().getGChannel(), m_Glut->getScene3d().getBChannel(), 0.5f);
 		glVertex3f((GLfloat) voxels[v]->x, (GLfloat) voxels[v]->y, (GLfloat) voxels[v]->z);
 	}
 

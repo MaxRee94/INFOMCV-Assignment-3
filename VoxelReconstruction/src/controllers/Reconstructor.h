@@ -44,6 +44,7 @@ private:
 
 	std::vector<Voxel*> m_voxels;           // Pointer vector to all voxels in the half-space
 	std::vector<Voxel*> m_visible_voxels;   // Pointer vector to all visible voxels
+	std::vector<Voxel*> prev_visible_voxels; // Pointer vector to all voxels of previous frame
 
 	void initialize();
 

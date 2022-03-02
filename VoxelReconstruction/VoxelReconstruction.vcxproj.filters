@@ -84,5 +84,8 @@
     <None Include="data\cam1\background.avi" />
     <None Include="data\cam1\checkerboard.avi" />
     <None Include="data\cam1\intrinsics.avi" />
+    <None Include="..\PolyVox-master\build\library\PolyVoxCore\PolyVoxCore.sln" />
+    <None Include="..\PolyVox-master\build\library\PolyVoxCore\PolyVoxCore.vcxproj" />
+    <None Include="..\PolyVox-master\build\library\PolyVoxCore\ALL_BUILD.vcxproj" />
   </ItemGroup>
 </Project>
