@@ -860,7 +860,12 @@ void Glut::drawVoxels()
 	vector<Reconstructor::Voxel*> voxels = m_Glut->getScene3d().getReconstructor().getVisibleVoxels();
 	for (size_t v = 0; v < voxels.size(); v++)
 	{
-		glColor4f(m_Glut->getScene3d().getRChannel(), m_Glut->getScene3d().getGChannel(), m_Glut->getScene3d().getBChannel(), 0.5f);
+		//glColor4f(m_Glut->getScene3d().getRChannel(), m_Glut->getScene3d().getGChannel(), m_Glut->getScene3d().getBChannel(), 0.5f);
+		Vec3b color = m_Glut->getScene3d().getCameras()[voxels[v]->closest_camera_index]->m_colored_frame.at<Vec3b>(voxels[v]->camera_projection[0]);
+		double blue = (double)color[0] / 255.0;
+		double green = (double)color[1] / 255.0;
+		double red = (double)color[2] / 255.0;
+		glColor4f(red, green, blue, 1);
 		glVertex3f((GLfloat) voxels[v]->x, (GLfloat) voxels[v]->y, (GLfloat) voxels[v]->z);
 	}
 

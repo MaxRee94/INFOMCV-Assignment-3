@@ -180,6 +180,7 @@ void Scene3DRenderer::processForeground(
 {
 	assert(!camera->getFrame().empty());
 	Mat hsv_image;
+	camera->m_colored_frame = camera->getFrame();
 	cvtColor(camera->getFrame(), hsv_image, CV_BGR2HSV);  // from BGR to HSV color space
 
 	//imshow("hsv img", hsv_image);

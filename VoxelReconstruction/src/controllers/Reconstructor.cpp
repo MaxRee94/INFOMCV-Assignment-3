@@ -12,6 +12,8 @@
 #include <opencv2/core/types_c.h>
 #include <cassert>
 #include <iostream>
+#include<conio.h>
+#include<math.h>
 
 #include "../utilities/General.h"
 
@@ -151,6 +153,18 @@ void Reconstructor::initialize()
 	cout << "done!" << endl;
 }
 
+double distanceCalculate(double x1, double y1, double x2, double y2)
+{
+	double x = x1 - x2; //calculating number to square in next step
+	double y = y1 - y2;
+	double dist;
+
+	dist = pow(x, 2) + pow(y, 2);       //calculating Euclidean distance
+	dist = sqrt(dist);
+
+	return dist;
+}
+
 /**
  * Count the amount of camera's each voxel in the space appears on,
  * if that amount equals the amount of cameras, add that voxel to the
@@ -186,6 +200,13 @@ void Reconstructor::update()
 		// If the voxel is present on all cameras
 		if (camera_counter == m_cameras.size())
 		{
+			std::vector<double> cam_distances;
+			for (size_t c = 0; c < m_cameras.size(); ++c) {
+				cam_distances.clear();
+				cam_distances.push_back(distanceCalculate(m_cameras[c]->getCameraLocation().x, m_cameras[c]->getCameraLocation().y, voxel->x, voxel->y));
+				voxel->closest_camera_index = std::min_element(cam_distances.begin(), cam_distances.end()) - cam_distances.begin();
+			}
+
 #pragma omp critical //push_back is critical
 			visible_voxels.push_back(voxel);
 		}
