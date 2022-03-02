@@ -70,6 +70,8 @@ class Scene3DRenderer
 	int m_v_threshold;                        // Value threshold number for background subtraction
 	int m_pv_threshold;                       // Value threshold value at previous iteration (update awareness)
 
+	std::vector<int> post_proc_params;		  // Post-processing parameters
+
 	// edge points of the virtual ground floor grid
 	std::vector<std::vector<cv::Point3i*> > m_floor_grid;
 
@@ -87,7 +89,9 @@ public:
 	void processForeground(
 			Camera*);
 
-	bool processFrame();
+	void initPostProcessed(cv::Mat, Camera*);
+
+	bool processFrame(bool = false);
 	void setCamera(
 			int);
 	void setTopView();
@@ -389,6 +393,12 @@ public:
 			int threshold)
 	{
 		m_h_threshold = threshold;
+	}
+
+	void setPostProcParams(
+		std::vector<int> params
+	) {
+		post_proc_params = params;
 	}
 
 	void setSThreshold(
