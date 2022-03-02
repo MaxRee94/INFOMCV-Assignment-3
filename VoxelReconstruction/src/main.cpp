@@ -191,9 +191,8 @@ void update_cam_foreground(
 
 vector<vector<int>> get_updated_voxels(Scene3DRenderer* scene3d) {
     // Get updated voxel model
-    Reconstructor reconstructor = scene3d->getReconstructor();
-    reconstructor.update();
-    vector<vector<int>> auto_visible_voxels = reconstructor.getVisibleVoxelCoords();
+    scene3d->getReconstructor().update();
+    vector<vector<int>> auto_visible_voxels = scene3d->getReconstructor().getVisibleVoxelCoords();
 
     return auto_visible_voxels;
 }
