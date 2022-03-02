@@ -76,12 +76,10 @@ Scene3DRenderer::Scene3DRenderer(
 	m_v_threshold = V;
 	m_pv_threshold = V;
 
-	if (manual_hsv) {
-		createTrackbar("Frame", VIDEO_WINDOW, &m_current_frame, m_number_of_frames - 2);
-		createTrackbar("H", VIDEO_WINDOW, &m_h_threshold, 255);
-		createTrackbar("S", VIDEO_WINDOW, &m_s_threshold, 255);
-		createTrackbar("V", VIDEO_WINDOW, &m_v_threshold, 255);
-	}
+	createTrackbar("Frame", VIDEO_WINDOW, &m_current_frame, m_number_of_frames - 2);
+	createTrackbar("H", VIDEO_WINDOW, &m_h_threshold, 255);
+	createTrackbar("S", VIDEO_WINDOW, &m_s_threshold, 255);
+	createTrackbar("V", VIDEO_WINDOW, &m_v_threshold, 255);
 
 	createFloorGrid();
 	setTopView();
@@ -113,7 +111,7 @@ bool Scene3DRenderer::processFrame(bool use_post_processing)
 		{
 			m_cameras[c]->getVideoFrame(m_current_frame);
 		}
-
+		assert(m_cameras[c] != NULL);
 		processForeground(m_cameras[c]);
 	}
 	return true;

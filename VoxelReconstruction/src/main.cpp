@@ -157,7 +157,7 @@ std::vector<Mat> get_manual_masks(std::vector<Camera*> m_cam_views) {
 }
 
 double get_cam_segm_fitness(
-    std::vector<int> hsv_params, std::vector<Camera*> m_cam_views, int cam_idx, Scene3DRenderer scene3d,
+    std::vector<int> hsv_params, std::vector<Camera*> m_cam_views, int cam_idx, Scene3DRenderer* scene3d,
     double total_pix, std::vector<Mat> manual_masks, std::vector<int> post_params, bool show = false
 ) {
     // Get camera and corresponding manual mask
@@ -165,7 +165,7 @@ double get_cam_segm_fitness(
     Mat manual_mask = manual_masks[cam_idx];
 
     // Get automatically generated mask
-    scene3d.processForeground(cam);
+    scene3d->processForeground(cam);
     Mat result = cam->getForegroundImage();
 
     // Get mask fitness by comparing to manually-created mask
@@ -179,12 +179,10 @@ double get_cam_segm_fitness(
     double white_pix = static_cast<double>(cv::countNonZero(xor_thresh));
     double fitness = 1.0 - white_pix / total_pix;
 
-    cout << "Fitness: " << fitness << endl;
-
     return fitness;
 }
 
-std::vector<vector<int>> get_bg_segm_params(std::vector<Camera*> m_cam_views, Scene3DRenderer scene3d) {
+std::vector<vector<int>> get_bg_segm_params(std::vector<Camera*> m_cam_views, Scene3DRenderer* scene3d) {
     // Hyperparameters
     int iteration_threshold = 100;
     float convergence_velocity = 1.5f;
@@ -245,10 +243,10 @@ std::vector<vector<int>> get_bg_segm_params(std::vector<Camera*> m_cam_views, Sc
         }
 
         // Set HSV values and post proc params on Scene3dRenderer
-        scene3d.setHThreshold(hsv_sample[0]);
-        scene3d.setSThreshold(hsv_sample[1]);
-        scene3d.setVThreshold(hsv_sample[2]);
-        scene3d.setPostProcParams(post_sample);
+        scene3d->setHThreshold(hsv_sample[0]);
+        scene3d->setSThreshold(hsv_sample[1]);
+        scene3d->setVThreshold(hsv_sample[2]);
+        scene3d->setPostProcParams(post_sample);
 
         // Test segmentation fitness values for all cameras
         fitnesses.clear();
@@ -357,7 +355,7 @@ int main(int argc, char** argv){
         // Tune background segmentation parameters
         std::vector<Camera*> m_cam_views = vr.get_cam_views();
         Scene3DRenderer scene3d = vr.run(argc, argv, false, false, false);
-        std::vector<vector<int>> bg_segm_params = get_bg_segm_params(m_cam_views, scene3d);
+        std::vector<vector<int>> bg_segm_params = get_bg_segm_params(m_cam_views, &scene3d);
 
         // Run without manual slider interface, using auto-generated foregrounds
         vr.run(argc, argv, true, false, true);
