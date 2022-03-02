@@ -346,7 +346,7 @@ int main(int argc, char** argv){
         else if (argv[1] == "-m"s || argv[1] == "--manual"s) {
             VoxelReconstruction::showKeys();
             VoxelReconstruction vr(DATA_PATH, 4);
-            vr.run(argc, argv);
+            vr.run(argc, argv, {0, 0, 0});
         }
 	}
     else {
@@ -354,11 +354,11 @@ int main(int argc, char** argv){
 
         // Tune background segmentation parameters
         std::vector<Camera*> m_cam_views = vr.get_cam_views();
-        Scene3DRenderer scene3d = vr.run(argc, argv, false, false, false);
+        Scene3DRenderer scene3d = vr.run(argc, argv, {0, 0, 0}, false, false, false);
         std::vector<vector<int>> bg_segm_params = get_bg_segm_params(m_cam_views, &scene3d);
 
         // Run without manual slider interface, using auto-generated foregrounds
-        vr.run(argc, argv, true, false, true);
+        vr.run(argc, argv, bg_segm_params[0], true, false, true);
     }
 
 	return EXIT_SUCCESS;

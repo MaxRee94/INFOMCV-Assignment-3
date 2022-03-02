@@ -110,7 +110,7 @@ namespace nl_uu_science_gmt
 	 * - Run it!
 	 */
 	Scene3DRenderer VoxelReconstruction::run(
-		int argc, char** argv, bool show_glut, bool manual_hsv, bool init_voxels
+		int argc, char** argv, vector<int> optimal_hsv_values, bool show_glut, bool manual_hsv, bool init_voxels
 	)
 	{
 		for (int v = 0; v < m_cam_views_amount; ++v)
@@ -126,7 +126,7 @@ namespace nl_uu_science_gmt
 		namedWindow(VIDEO_WINDOW, CV_WINDOW_KEEPRATIO);
 
 		Reconstructor reconstructor(m_cam_views, init_voxels);
-		Scene3DRenderer scene3d(reconstructor, m_cam_views, manual_hsv);
+		Scene3DRenderer scene3d(reconstructor, m_cam_views, optimal_hsv_values, manual_hsv);
 
 		if (show_glut) {
 			Glut glut(scene3d);

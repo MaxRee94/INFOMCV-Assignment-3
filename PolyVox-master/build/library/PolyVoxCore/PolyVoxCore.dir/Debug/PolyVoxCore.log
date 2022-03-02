@@ -1,1 +1,116 @@
-﻿  PolyVoxCore.vcxproj -> C:\Users\jimiu\Desktop\INFOMCV-Assignment-2\PolyVox-master\build\library\PolyVoxCore\Debug\PolyVoxCore.lib
+﻿  Building Custom Rule C:/Users/jimiu/Desktop/INFOMCV-Assignment-2/PolyVox-master/library/PolyVoxCore/CMakeLists.txt
+  CMake is re-running because C:/Users/jimiu/Desktop/INFOMCV-Assignment-2/PolyVox-master/build/library/PolyVoxCore/CMakeFiles/generate.stamp is out-of-date.
+    the file 'C:/Users/jimiu/Desktop/INFOMCV-Assignment-2/PolyVox-master/library/PolyVoxCore/CMakeLists.txt'
+    is newer than 'C:/Users/jimiu/Desktop/INFOMCV-Assignment-2/PolyVox-master/build/library/PolyVoxCore/CMakeFiles/generate.stamp.depend'
+    result='-1'
+  CMake Deprecation Warning at CMakeLists.txt:23 (CMAKE_MINIMUM_REQUIRED):
+    Compatibility with CMake < 2.8.12 will be removed from a future version of
+    CMake.
+  
+    Update the VERSION argument <min> value or use a ...<max> suffix to tell
+    CMake that the project does not need compatibility with older versions.
+  
+  
+  -- Selecting Windows SDK version 10.0.19041.0 to target Windows 10.0.19044.
+  -- Could NOT find Doxygen (missing: DOXYGEN_EXECUTABLE) 
+  -- Found unsuitable Qt version "" from NOTFOUND
+  Qt QTOPENGL library not found.
+  Qt QTGUI library not found.
+  Qt QTTEST library not found.
+  Qt QTCORE library not found.
+  CMake Deprecation Warning at library/CMakeLists.txt:23 (CMAKE_MINIMUM_REQUIRED):
+    Compatibility with CMake < 2.8.12 will be removed from a future version of
+    CMake.
+  
+    Update the VERSION argument <min> value or use a ...<max> suffix to tell
+    CMake that the project does not need compatibility with older versions.
+  
+  
+  CMake Deprecation Warning at library/PolyVoxCore/CMakeLists.txt:23 (CMAKE_MINIMUM_REQUIRED):
+    Compatibility with CMake < 2.8.12 will be removed from a future version of
+    CMake.
+  
+    Update the VERSION argument <min> value or use a ...<max> suffix to tell
+    CMake that the project does not need compatibility with older versions.
+  
+  
+  CMake Deprecation Warning at library/PolyVoxUtil/CMakeLists.txt:23 (CMAKE_MINIMUM_REQUIRED):
+    Compatibility with CMake < 2.8.12 will be removed from a future version of
+    CMake.
+  
+    Update the VERSION argument <min> value or use a ...<max> suffix to tell
+    CMake that the project does not need compatibility with older versions.
+  
+  
+  -- Could NOT find SWIG (missing: SWIG_EXECUTABLE SWIG_DIR) 
+  -- `sphinx-build` was not found. Try setting SPHINXBUILD_EXECUTABLE to its location.
+  -- `qhelpgenerator` was not found. Try setting QT_QCOLLECTIONGENERATOR_EXECUTABLE to its location.
+  -- The following OPTIONAL packages have been found:
+  
+   * PythonLibs, Programming language, <http://www.python.org>
+  
+  -- The following features have been disabled:
+  
+   * Examples, Examples of PolyVox usage
+   * Tests, Unit tests
+   * Bindings, SWIG bindings
+   * API docs, HTML documentation of the API
+   * Qt Help, API docs in Qt Help format
+   * Manual, HTML user's manual
+  
+  -- The following OPTIONAL packages have not been found:
+  
+   * Doxygen, API documentation generator, <http://www.doxygen.org>
+     Building the API documentation
+   * SWIG, Bindings generator, <http://www.swig.org>
+  
+  -- The following RECOMMENDED packages have not been found:
+  
+   * Qt4, C++ framework, <http://qt-project.org>
+     Building the examples
+     Building the tests
+  
+  -- 
+  -- Summary
+  -- -------
+  -- Library type:        STATIC
+  -- Build examples:      OFF
+  -- Build tests:         OFF
+  -- Build bindings:      OFF
+  -- API Docs available:  NO
+  --  - Qt Help bundling: OFF
+  -- Build manual:        OFF
+  -- 
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/jimiu/Desktop/INFOMCV-Assignment-2/PolyVox-master/build
+  AStarPathfinder.cpp
+  ArraySizes.cpp
+  MarchingCubesTables.cpp
+  RandomUnitVectors.cpp
+  RandomVectors.cpp
+  Utility.cpp
+  Log.cpp
+  MeshDecimator.cpp
+  Region.cpp
+  SimpleInterface.cpp
+C:\Users\jimiu\Desktop\INFOMCV-Assignment-2\PolyVox-master\library\PolyVoxCore\include\PolyVoxCore/SurfaceMesh.inl(46,1): warning C4267: 'return': conversion from 'size_t' to 'uint32_t', possible loss of data
+C:\Users\jimiu\Desktop\INFOMCV-Assignment-2\PolyVox-master\library\PolyVoxCore\include\PolyVoxCore/SurfaceMesh.inl(45): message : while compiling class template member function 'uint32_t PolyVox::SurfaceMesh<PolyVox::PositionMaterialNormal>::getNoOfIndices(void) const'
+C:\Users\jimiu\Desktop\INFOMCV-Assignment-2\PolyVox-master\library\PolyVoxCore\include\PolyVoxCore/CubicSurfaceExtractorWithNormals.inl(125): message : see reference to function template instantiation 'uint32_t PolyVox::SurfaceMesh<PolyVox::PositionMaterialNormal>::getNoOfIndices(void) const' being compiled
+C:\Users\jimiu\Desktop\INFOMCV-Assignment-2\PolyVox-master\library\PolyVoxCore\include\PolyVoxCore/CubicSurfaceExtractorWithNormals.inl(38): message : while compiling class template member function 'void PolyVox::CubicSurfaceExtractorWithNormals<PolyVox::SimpleVolume<PolyVox::MaterialDensityPair88>,PolyVox::DefaultIsQuadNeeded<PolyVox::MaterialDensityPair<uint16_t,8,8>>>::execute(void)'
+C:\Users\jimiu\Desktop\INFOMCV-Assignment-2\PolyVox-master\library\PolyVoxCore\source\SimpleInterface.cpp(35): message : see reference to function template instantiation 'void PolyVox::CubicSurfaceExtractorWithNormals<PolyVox::SimpleVolume<PolyVox::MaterialDensityPair88>,PolyVox::DefaultIsQuadNeeded<PolyVox::MaterialDensityPair<uint16_t,8,8>>>::execute(void)' being compiled
+C:\Users\jimiu\Desktop\INFOMCV-Assignment-2\PolyVox-master\library\PolyVoxCore\source\SimpleInterface.cpp(34): message : see reference to class template instantiation 'PolyVox::CubicSurfaceExtractorWithNormals<PolyVox::SimpleVolume<PolyVox::MaterialDensityPair88>,PolyVox::DefaultIsQuadNeeded<PolyVox::MaterialDensityPair<uint16_t,8,8>>>' being compiled
+C:\Users\jimiu\Desktop\INFOMCV-Assignment-2\PolyVox-master\library\PolyVoxCore\include\PolyVoxCore/SurfaceMesh.inl(130,1): warning C4267: 'return': conversion from 'size_t' to 'uint32_t', possible loss of data
+C:\Users\jimiu\Desktop\INFOMCV-Assignment-2\PolyVox-master\library\PolyVoxCore\include\PolyVoxCore/SurfaceMesh.inl(128): message : while compiling class template member function 'uint32_t PolyVox::SurfaceMesh<PolyVox::PositionMaterialNormal>::addVertex(const VertexType &)'
+          with
+          [
+              VertexType=PolyVox::PositionMaterialNormal
+          ]
+C:\Users\jimiu\Desktop\INFOMCV-Assignment-2\PolyVox-master\library\PolyVoxCore\include\PolyVoxCore/CubicSurfaceExtractorWithNormals.inl(56): message : see reference to function template instantiation 'uint32_t PolyVox::SurfaceMesh<PolyVox::PositionMaterialNormal>::addVertex(const VertexType &)' being compiled
+          with
+          [
+              VertexType=PolyVox::PositionMaterialNormal
+          ]
+  VertexTypes.cpp
+  Generating Code...
+  PolyVoxCore.vcxproj -> C:\Users\jimiu\Desktop\INFOMCV-Assignment-2\PolyVox-master\build\library\PolyVoxCore\Debug\PolyVoxCore.lib

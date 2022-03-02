@@ -29,7 +29,7 @@ namespace nl_uu_science_gmt
  * Scene properties class (mostly called by Glut)
  */
 Scene3DRenderer::Scene3DRenderer(
-		Reconstructor &r, const vector<Camera*> &cs, bool manual_hsv) :
+		Reconstructor &r, const vector<Camera*> &cs, vector<int> optimal_hsv_values, bool manual_hsv) :
 				m_reconstructor(r),
 				m_cameras(cs),
 				m_num(4),
@@ -67,9 +67,9 @@ Scene3DRenderer::Scene3DRenderer(
 	m_current_frame = 0;
 	m_previous_frame = -1;
 
-	const int H = 0;
-	const int S = 0;
-	const int V = 0;
+	const int H = optimal_hsv_values[0];
+	const int S = optimal_hsv_values[1];
+	const int V = optimal_hsv_values[2];
 	m_h_threshold = H;
 	m_ph_threshold = H;
 	m_s_threshold = S;
@@ -88,11 +88,11 @@ Scene3DRenderer::Scene3DRenderer(
 	createTrackbar("G", VIDEO_WINDOW, &gValue, 255);
 	createTrackbar("B", VIDEO_WINDOW, &bValue, 255);
 
-	if (manual_hsv) {
-		createTrackbar("Frame", VIDEO_WINDOW, &m_current_frame, m_number_of_frames - 2);
-		createTrackbar("H", VIDEO_WINDOW, &m_h_threshold, 255);
-		createTrackbar("S", VIDEO_WINDOW, &m_s_threshold, 255);
-		createTrackbar("V", VIDEO_WINDOW, &m_v_threshold, 255);
+	
+	createTrackbar("Frame", VIDEO_WINDOW, &m_current_frame, m_number_of_frames - 2);
+	createTrackbar("H", VIDEO_WINDOW, &m_h_threshold, 255);
+	createTrackbar("S", VIDEO_WINDOW, &m_s_threshold, 255);
+	createTrackbar("V", VIDEO_WINDOW, &m_v_threshold, 255);
 
 	createFloorGrid();
 	setTopView();
@@ -146,12 +146,12 @@ void Scene3DRenderer::initPostProcessed(Mat input, Camera* camera) {
 	//}
 
 	// Find contours
-	findContours(input, contours, hierarchy, RETR_TREE, CHAIN_APPROX_NONE);
-//#pragma omp parallel for schedule(guided)
-	for (int i = 0; i < min(int(contours.size()), 3); i++) {
-		//cout << hierarchy[i][0] << ", " << hierarchy[i][1] << ", " << hierarchy[i][2] << ", " << hierarchy[i][3] << endl;
-		drawContours(tmp, contours, hierarchy[i][0], white, FILLED, 8, hierarchy);
-	}
+//	findContours(input, contours, hierarchy, RETR_TREE, CHAIN_APPROX_NONE);
+////#pragma omp parallel for schedule(guided)
+//	for (int i = 0; i < min(int(contours.size()), 3); i++) {
+//		//cout << hierarchy[i][0] << ", " << hierarchy[i][1] << ", " << hierarchy[i][2] << ", " << hierarchy[i][3] << endl;
+//		drawContours(tmp, contours, hierarchy[i][0], white, FILLED, 8, hierarchy);
+//	}
 	//split(tmp, channels);
 	//threshold(channels[0], result, 100, 255, THRESH_BINARY);
 

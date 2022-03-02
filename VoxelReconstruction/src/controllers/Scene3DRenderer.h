@@ -98,7 +98,7 @@ class Scene3DRenderer
 
 public:
 	Scene3DRenderer(
-			Reconstructor &, const std::vector<Camera*> &, bool manual_hsv = true);
+			Reconstructor &, const std::vector<Camera*> &, std::vector<int> optimal_hsv_values, bool manual_hsv = true);
 	virtual ~Scene3DRenderer();
 
 	void processForeground(
