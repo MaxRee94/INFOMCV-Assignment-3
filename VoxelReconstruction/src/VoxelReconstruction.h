@@ -31,7 +31,10 @@ public:
 	std::vector<Camera*> get_cam_views();
 	static void showKeys();
 
-	Scene3DRenderer run(int, char**, std::vector<int> optimal_hsv_values, bool = true, bool = true, bool = true);
+	Scene3DRenderer run(
+		int, char**, std::vector<int> optimal_hsv_values, std::vector<int> post_proc_params,
+		bool = true, bool = true, bool = true
+	);
 };
 
 } /* namespace nl_uu_science_gmt */

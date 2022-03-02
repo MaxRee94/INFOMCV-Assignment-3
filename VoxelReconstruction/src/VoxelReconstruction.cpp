@@ -110,7 +110,7 @@ namespace nl_uu_science_gmt
 	 * - Run it!
 	 */
 	Scene3DRenderer VoxelReconstruction::run(
-		int argc, char** argv, vector<int> optimal_hsv_values, bool show_glut, bool manual_hsv, bool init_voxels
+		int argc, char** argv, vector<int> optimal_hsv_values, vector<int> post_proc_params, bool show_glut, bool manual_hsv, bool init_voxels
 	)
 	{
 		for (int v = 0; v < m_cam_views_amount; ++v)
@@ -127,6 +127,7 @@ namespace nl_uu_science_gmt
 
 		Reconstructor reconstructor(m_cam_views, init_voxels);
 		Scene3DRenderer scene3d(reconstructor, m_cam_views, optimal_hsv_values, manual_hsv);
+		scene3d.setPostProcParams(post_proc_params);
 
 		if (show_glut) {
 			Glut glut(scene3d);

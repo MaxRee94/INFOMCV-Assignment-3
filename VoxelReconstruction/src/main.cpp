@@ -196,12 +196,12 @@ vector<vector<int>> get_updated_voxels(Reconstructor* reconstructor) {
 }
 
 double assess_foregrounds(vector<vector<int>>* manual_visible_voxels,
-    Reconstructor* reconstructor, vector<vector<int>>* all_voxels)
+    Reconstructor* reconstructor, vector<vector<int>>* all_voxels, double noise_penalty)
 {
     vector<vector<int>> auto_visible_voxels = get_updated_voxels(reconstructor);
     int overlapping = 0;
     double fitness;
-    cout << "number of auto voxels: " << auto_visible_voxels.size() << endl;
+    
     if (auto_visible_voxels.size() < manual_visible_voxels->size() * 2) {
         for (int i = 0; i < manual_visible_voxels->size(); i++) {
             for (int j = 0; j < auto_visible_voxels.size(); j++) {
@@ -211,16 +211,19 @@ double assess_foregrounds(vector<vector<int>>* manual_visible_voxels,
             }
         }
         fitness = (double)overlapping / (double)manual_visible_voxels->size() - ((double)(
-            auto_visible_voxels.size() - overlapping) / (double)manual_visible_voxels->size())*0.5;
+            auto_visible_voxels.size() - overlapping) / (double)manual_visible_voxels->size()) * noise_penalty;
     }
     else {
         fitness = 0.0;
     }
 
-    cout << "num of vox: " << reconstructor->get_number_of_voxels() << endl;
-    cout << "overlapping:" << overlapping << endl;
     cout << "fitness: " << fitness << endl;
-    
+    if (fitness > 0.63) {
+        cout << "---num of autovoxels: " << auto_visible_voxels.size() << endl;
+        cout << "---num of vox: " << reconstructor->get_number_of_voxels() << endl;
+        cout << "---overlapping:" << overlapping << endl;
+    }
+
     return fitness;
 }
 
@@ -241,11 +244,12 @@ vector<vector<int>> get_manual_voxelmodel(
 
 vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRenderer* scene3d) {
     // Hyperparameters
-    int iteration_threshold = 40;
-    float convergence_velocity = 1.3f;
+    int iteration_threshold = 25;
+    float convergence_velocity = 1.15f;
     float stdev_multiplier = 2.0f;
     float stdev_multiplier_minimum = 0.005f;
     vector<int> post_iteration_range = { -5, 5 };
+    double noise_penalty = 0.6;
 
     // Initial values
     vector<int> hsv_optima = { 128, 128, 128 }; // Start with mean values (255/2)
@@ -314,7 +318,8 @@ vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRende
                 hsv_sample, m_cam_views, c, scene3d, total_pix, manual_masks, post_sample
             );
         }
-        fitness = assess_foregrounds(&manual_visible_voxels, &reconstructor, &all_voxels);
+        fitness = assess_foregrounds(
+            &manual_visible_voxels, &reconstructor, &all_voxels, noise_penalty);
 
         // Update if sample fitness is better than previous best value
         if (fitness > best_fitness) {
@@ -328,7 +333,7 @@ vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRende
         }
 
         if (j % 2 == 0) {
-            cout << "  iteration: " << j << ". stdev_multiplier: " << stdev_multiplier << ".\n";
+            cout << "  iteration: " << j << ". stdev_multiplier: " << stdev_multiplier << "best fitness: " << best_fitness << ".\n";
         }
 
         // Decrease standard deviation to favor samples close to current optima
@@ -343,14 +348,19 @@ vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRende
         j++;
     }
 
-    for (int c = 0; c < m_cam_views.size(); c++) {
-        update_cam_foreground(
-            hsv_optima, m_cam_views, c, scene3d, total_pix, manual_masks, post_optima, true
-        );
-    }
     cout << "Best fitness: " << best_fitness << " after " << j << " iterations." << endl;
     cout << "Found hsv optima: H " << hsv_optima[0] << " S " << hsv_optima[1] << " V " << hsv_optima[2] << endl;
     cout << "Found post-processing optima: " << post_optima[0] << ", " << post_optima[1];
+    cout << "\nInfo about found optima:" << endl;
+    
+    for (int c = 0; c < m_cam_views.size(); c++) {
+        update_cam_foreground(
+            hsv_optima, m_cam_views, c, scene3d, total_pix, manual_masks, post_optima
+        );
+    }
+    assess_foregrounds(
+        &manual_visible_voxels, &reconstructor, &all_voxels, noise_penalty);
+
     //waitKey();
 
     return { hsv_optima, post_optima };
@@ -404,7 +414,12 @@ int main(int argc, char** argv){
         else if (argv[1] == "-m"s || argv[1] == "--manual"s) {
             VoxelReconstruction::showKeys();
             VoxelReconstruction vr(DATA_PATH, 4);
-            vr.run(argc, argv, {0, 0, 0});
+            vr.run(argc, argv, {0, 0, 0}, {0, 0});
+        }
+        else if (argv[1] == "-skip"s || argv[1] == "--skip_tuning"s) {
+            VoxelReconstruction::showKeys();
+            VoxelReconstruction vr(DATA_PATH, 4);
+            vr.run(argc, argv, { 0, 67, 63 }, { 0, 0 }, true, false, true);
         }
 	}
     else {
@@ -412,11 +427,10 @@ int main(int argc, char** argv){
 
         // Tune background segmentation parameters
         vector<Camera*> m_cam_views = vr.get_cam_views();
-        Scene3DRenderer scene3d = vr.run(argc, argv, {0, 0, 0}, false, false, false);
+        Scene3DRenderer scene3d = vr.run(argc, argv, { 0, 0, 0 }, { 0, 0 }, false, false, false);
         vector<vector<int>> bg_segm_params = get_bg_segm_params(m_cam_views, &scene3d);
-        //waitKey();
-        // Run without manual slider interface, using auto-generated foregrounds
-        vr.run(argc, argv, bg_segm_params[0], true, false, true);
+
+        vr.run(argc, argv, bg_segm_params[0], bg_segm_params[1], true, false, true);
     }
 
 	return EXIT_SUCCESS;

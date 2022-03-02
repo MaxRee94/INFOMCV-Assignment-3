@@ -134,29 +134,31 @@ void Scene3DRenderer::initPostProcessed(Mat input, Camera* camera) {
 	// Execute dilation/erosion sequence according to given parameters.
 	// Positive numbers correspond to dilation, negative to erosion.
 	// Zero values mean that neither dilation nor erosion is applied.
-	//Point anchor = Point(-1, -1);
-	//Mat kernel = Mat();
-	//for (int i = 0; i < post_proc_params.size(); i++) {
-	//    if (post_proc_params[i] < 0) {
-	//        erode(input, input, kernel, anchor, -post_proc_params[i]);
-	//    }
-	//    else if (post_proc_params[i] > 0) {
-	//        dilate(input, input, kernel, anchor, post_proc_params[i]);
-	//    }
-	//}
+	Point anchor = Point(-1, -1);
+	Mat kernel = Mat();
+	for (int i = 0; i < post_proc_params.size(); i++) {
+	    if (post_proc_params[i] < 0) {
+	        erode(input, input, kernel, anchor, -post_proc_params[i]);
+	    }
+	    else if (post_proc_params[i] > 0) {
+	        dilate(input, input, kernel, anchor, post_proc_params[i]);
+	    }
+	}
 
 	// Find contours
-//	findContours(input, contours, hierarchy, RETR_TREE, CHAIN_APPROX_NONE);
-////#pragma omp parallel for schedule(guided)
-//	for (int i = 0; i < min(int(contours.size()), 3); i++) {
-//		//cout << hierarchy[i][0] << ", " << hierarchy[i][1] << ", " << hierarchy[i][2] << ", " << hierarchy[i][3] << endl;
-//		drawContours(tmp, contours, hierarchy[i][0], white, FILLED, 8, hierarchy);
-//	}
-	//split(tmp, channels);
-	//threshold(channels[0], result, 100, 255, THRESH_BINARY);
+	int size = 1;
+	cv::Size size_element = cv::Size(2 * size + 1, 2 * size + 1);
+	kernel = cv::getStructuringElement(MORPH_ELLIPSE,
+		size_element,
+		cv::Point(size, size)
+	);
+	findContours(input, contours, hierarchy, RETR_TREE, CHAIN_APPROX_NONE);
+	morphologyEx(input, input, MORPH_OPEN, kernel);
+	for (int i = 0; i < contours.size(); i++) {
+		
+	}
 
-	//camera->setForegroundImage(result);
-	camera->setForegroundImage(input); // TODO: UNCOMMENT ABOVE AND REMOVE THIS LINE
+	camera->setForegroundImage(input);
 }
 
 
