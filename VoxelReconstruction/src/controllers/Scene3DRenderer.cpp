@@ -136,6 +136,7 @@ void Scene3DRenderer::initPostProcessed(Mat input, Camera* camera) {
 	// Zero values mean that neither dilation nor erosion is applied.
 	Point anchor = Point(-1, -1);
 	Mat kernel = Mat();
+	cv::imshow("Before post proc", input);
 	for (int i = 0; i < post_proc_params.size(); i++) {
 	    if (post_proc_params[i] < 0) {
 	        erode(input, input, kernel, anchor, -post_proc_params[i]);
@@ -146,26 +147,28 @@ void Scene3DRenderer::initPostProcessed(Mat input, Camera* camera) {
 	}
 
 	// Find contours
-	int size = 1;
-	cv::Size size_element = cv::Size(2 * size + 1, 2 * size + 1);
-	findContours(input, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_NONE);
-	//morphologyEx(input, input, MORPH_OPEN, kernel);
-	int cont_size_thresh = 800;
-	int largest = 0;
-	int largest_idx;
-	for (int i = 0; i < contours.size(); i++) {
-		if (contourArea(contours[i]) > largest) {
-			largest_idx = i;
-			largest = contourArea(contours[i]);
-		}
-	}
-	for (int i = 0; i < contours.size(); i++) {
-		if (contourArea(contours[i]) < cont_size_thresh && i != largest_idx) {
-			drawContours(input, contours, hierarchy[i][1], white, FILLED, 8, hierarchy);
-		}
-	}
+	//int size = 1;
+	//cv::imshow("After eros/dil, before contours", input);
+	//cv::Size size_element = cv::Size(2 * size + 1, 2 * size + 1);
+	//findContours(input, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_NONE);
+	////morphologyEx(input, input, MORPH_OPEN, kernel);
+	//int cont_size_thresh = 50;
+	//int largest = 0;
+	//int largest_idx;
+	//for (int i = 0; i < contours.size(); i++) {
+	//	if (contourArea(contours[i]) > largest) {
+	//		largest_idx = i;
+	//		largest = contourArea(contours[i]);
+	//	}
+	//}
+	//for (int i = 0; i < contours.size(); i++) {
+	//	if (contourArea(contours[i]) < cont_size_thresh && i != largest_idx) {
+	//		drawContours(input, contours, hierarchy[i][1], white, FILLED, 8, hierarchy);
+	//	}
+	//}
 	
-	threshold(input, input, 100, 255, CV_THRESH_BINARY);
+	threshold(input, input, 20, 255, CV_THRESH_BINARY);
+	cv::imshow("AFter", input);
 
 	camera->setForegroundImage(input);
 }
