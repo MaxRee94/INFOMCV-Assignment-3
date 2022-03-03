@@ -217,6 +217,10 @@ double assess_foregrounds(vector<vector<int>>* manual_visible_voxels,
         fitness = 0.0;
     }
 
+    if (auto_visible_voxels.size() > 7000) {
+        fitness *= 0.7;
+    }
+
     cout << "fitness: " << fitness << endl;
     if (fitness > 0.5) {
         cout << "---num of autovoxels: " << auto_visible_voxels.size() << endl;
@@ -249,7 +253,7 @@ vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRende
     float stdev_multiplier = 2.0f;
     float stdev_multiplier_minimum = 0.005f;
     vector<int> post_iteration_range = { -5, 5 };
-    double noise_penalty = 0.75;
+    double noise_penalty = 0.5;
 
     // Initial values
     vector<int> hsv_optima = { 128, 128, 128 }; // Start with mean values (255/2)
