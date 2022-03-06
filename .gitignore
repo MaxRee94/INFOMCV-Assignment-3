@@ -452,3 +452,4 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+VoxelReconstruction/x64/Debug/VoxelReconstruction.vcxproj.FileListAbsolute.txt
