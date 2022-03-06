@@ -130,6 +130,10 @@ cv::Mat3b getMean(const vector<cv::Mat3b>& images){
         // Convert the input images to CV_64FC3 ...
         images[i].convertTo(temp, CV_64FC3);
 
+        if (temp.cols == 0) {
+            break;
+        }
+
         // ... so we can accumulate
         m += temp;
     }
