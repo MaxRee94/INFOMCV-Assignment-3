@@ -152,7 +152,7 @@ vector<vector<Mat>> get_manual_masks(vector<Camera*> m_cam_views) {
         Camera* cam = m_cam_views[c];
         for (int j = 0; j < 2; j++) {
             // Advance cam frame to make sure it contains an active frame
-            cam->getVideoFrame(frame_indices.at(j));
+            Mat frame = cam->getVideoFrame(frame_indices.at(j));
 
             // Read- and threshold manual mask
             Mat tmp = imread(
@@ -179,7 +179,7 @@ void update_cam_foreground(
     // Get camera and corresponding manual mask
     Camera* cam = m_cam_views[cam_idx];
     cam->getVideoFrame(frame_indx);
-    Mat manual_mask = manual_masks[cam_idx][frame_indx];
+    //Mat manual_mask = manual_masks[cam_idx][frame_indx];
 
     // Get automatically generated mask
     scene3d->processForeground(cam);
@@ -209,6 +209,7 @@ double assess_foregrounds(vector<vector<int>>* manual_visible_voxels,
                 }
             }
         }
+        //fitness = (double)overlapping / (double)manual_visible_voxels->size();
         fitness = (double)overlapping / (double)manual_visible_voxels->size() - ((double)(
             auto_visible_voxels.size() - overlapping) / (double)manual_visible_voxels->size()) * noise_penalty;
     }
@@ -221,7 +222,7 @@ double assess_foregrounds(vector<vector<int>>* manual_visible_voxels,
     }*/
 
     cout << "fitness: " << fitness << endl;
-    if (fitness > 0.5) {
+    if (fitness > -0.5) {
         cout << "---num of autovoxels: " << auto_visible_voxels.size() << endl;
         cout << "---num of vox: " << reconstructor->get_number_of_voxels() << endl;
         cout << "---overlapping:" << overlapping << endl;
@@ -256,15 +257,15 @@ vector<vector<vector<int>>> get_manual_voxelmodels(
 
 vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRenderer* scene3d) {
     // Hyperparameters
-    int iteration_threshold = 60;
-    float convergence_velocity = 1.06f;
+    int iteration_threshold = 35;
+    float convergence_velocity = 1.15f;
     float stdev_multiplier = 2.0f;
     float stdev_multiplier_minimum = 0.005f;
     vector<int> post_iteration_range = { -5, 5 };
-    double noise_penalty = 0.1;
+    double noise_penalty = 0.5;
 
     // Initial values
-    vector<int> hsv_optima = { 128, 128, 128 }; // Start with mean values (255/2)
+    vector<int> hsv_optima = { 0, 0, 0}; // Start with mean values (255/2)
     vector<int> post_optima = { 0, 0 }; // Start with mean values (neither dilation nor erosion)
     int dt_since_update = 0;
     double total_pix = static_cast<double>(img_size[0] * img_size[1]);
@@ -276,6 +277,7 @@ vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRende
     int post_element;
     double fitness;
     int j = 0;
+    vector<int> frame_indices = { 300, 1200 };
     vector<vector<Mat>> manual_masks = get_manual_masks(m_cam_views);
     Reconstructor reconstructor(m_cam_views, true);
     vector<vector<int>> all_voxels = reconstructor.getAllVoxelCoords();
@@ -329,7 +331,7 @@ vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRende
         for (int j = 0; j < 2; j++) {
             for (int c = 0; c < m_cam_views.size(); c++) {
                 update_cam_foreground(
-                    hsv_sample, m_cam_views, c, scene3d, total_pix, manual_masks, post_sample, j
+                    hsv_sample, m_cam_views, c, scene3d, total_pix, manual_masks, post_sample, frame_indices.at(j)
                 );
             }
             fitness += assess_foregrounds(
