@@ -140,55 +140,50 @@ cv::Mat3b getMean(const vector<cv::Mat3b>& images){
 
     // Convert back to CV_8UC3 type, applying the division to get the actual mean
     m.convertTo(m, CV_8U, 1. / images.size());
-    return m;
+return m;
 }
 
-vector<Mat> get_manual_masks(vector<Camera*> m_cam_views) {
-    vector<Mat> manual_masks;
+// Load manual masks of frames 301 and 1201 (indices 300 and 1200)
+vector<vector<Mat>> get_manual_masks(vector<Camera*> m_cam_views) {
+    vector<vector<Mat>> manual_masks;
+    vector<int> frame_indices = { 300, 1200 };
     for (int c = 0; c < m_cam_views.size(); c++) {
-        // Advance cam frame to make sure it contains an active frame
+        vector<Mat> cam_masks;
         Camera* cam = m_cam_views[c];
-        cam->getVideoFrame(10);
+        for (int j = 0; j < 2; j++) {
+            // Advance cam frame to make sure it contains an active frame
+            cam->getVideoFrame(frame_indices.at(j));
 
-        // Read- and threshold manual mask
-        Mat tmp = imread(
-            DATA_PATH + "cam" + to_string(c + 1) + string(PATH_SEP) + "manual_mask.png"
-        );
-        vector<Mat> channels;
-        split(tmp, channels);
-        Mat manual_mask;
-        threshold(channels[0], manual_mask, 150, 255, THRESH_BINARY);
-        manual_masks.push_back(manual_mask);
+            // Read- and threshold manual mask
+            Mat tmp = imread(
+                DATA_PATH + "cam" + to_string(c + 1) + string(PATH_SEP) + "manual_background_" + to_string(j + 1) + ".png"
+            );
+            //imshow("c: " + to_string(c) + ", j: " + to_string(j), tmp);
+
+            vector<Mat> channels;
+            split(tmp, channels);
+            Mat manual_mask;
+            threshold(channels[0], manual_mask, 150, 255, THRESH_BINARY);
+            cam_masks.push_back(manual_mask);
+        }
+        manual_masks.push_back(cam_masks);
     }
+    //waitKey(0);
     return manual_masks;
 }
 
 void update_cam_foreground(
     vector<int> hsv_params, vector<Camera*> m_cam_views, int cam_idx, Scene3DRenderer* scene3d,
-    double total_pix, vector<Mat> manual_masks, vector<int> post_params, bool show = false
+    double total_pix, vector<vector<Mat>> manual_masks, vector<int> post_params, int frame_indx
 ) {
     // Get camera and corresponding manual mask
     Camera* cam = m_cam_views[cam_idx];
-    Mat manual_mask = manual_masks[cam_idx];
+    cam->getVideoFrame(frame_indx);
+    Mat manual_mask = manual_masks[cam_idx][frame_indx];
 
     // Get automatically generated mask
     scene3d->processForeground(cam);
     Mat result = cam->getForegroundImage();
-
-    //// Get mask fitness by comparing to manually-created mask
-    //Mat xor_thresh, xor_inside_mask;
-    //bitwise_xor(result, manual_mask, xor_thresh);
-    //bitwise_and(manual_mask, xor_thresh, xor_inside_mask);
-    //if (show) {
-    //    imshow("Manual", manual_mask);
-    //    imshow("Post-processed", result);
-    //    imshow("Xor thresh", xor_thresh);
-    //    imshow("Xor inside mask", xor_inside_mask);
-    //}
-    //double white_pix = static_cast<double>(cv::countNonZero(xor_thresh));
-    //double white_pix_inside = static_cast<double>(cv::countNonZero(xor_inside_mask));
-    //double white_pix_outside = white_pix - white_pix_inside;
-    //double fitness = 1.0 - (inside_mask_weight*white_pix_inside + white_pix_outside) / total_pix;
 }
 
 vector<vector<int>> get_updated_voxels(Reconstructor* reconstructor) {
@@ -205,8 +200,8 @@ double assess_foregrounds(vector<vector<int>>* manual_visible_voxels,
     vector<vector<int>> auto_visible_voxels = get_updated_voxels(reconstructor);
     int overlapping = 0;
     double fitness;
-    
-    if (auto_visible_voxels.size() < manual_visible_voxels->size() * 2) {
+
+    if (auto_visible_voxels.size() < manual_visible_voxels->size() * 3) {
         for (int i = 0; i < manual_visible_voxels->size(); i++) {
             for (int j = 0; j < auto_visible_voxels.size(); j++) {
                 if (manual_visible_voxels->at(i) == auto_visible_voxels[j]) {
@@ -221,9 +216,9 @@ double assess_foregrounds(vector<vector<int>>* manual_visible_voxels,
         fitness = 0.0;
     }
 
-    if (auto_visible_voxels.size() > 7000) {
+    /*if (auto_visible_voxels.size() > 7000) {
         fitness *= 0.7;
-    }
+    }*/
 
     cout << "fitness: " << fitness << endl;
     if (fitness > 0.5) {
@@ -235,29 +230,38 @@ double assess_foregrounds(vector<vector<int>>* manual_visible_voxels,
     return fitness;
 }
 
-vector<vector<int>> get_manual_voxelmodel(
-    Reconstructor* reconstructor, vector<Mat> manual_masks, vector<Camera*> m_cam_views
+vector<vector<vector<int>>> get_manual_voxelmodels(
+    Reconstructor* reconstructor, vector<vector<Mat>> manual_masks, vector<Camera*> m_cam_views
 ) {
-    // Set manual masks as foreground images for all cameras
-    for (int c = 0; c < 4; c++) {
-        Camera* cam = m_cam_views[c];
-        cam->setForegroundImage(manual_masks[c]);
-    }
-   
-    vector<vector<int>> manual_visible_voxels = get_updated_voxels(reconstructor);
-    //cout << "num of voxels in manual model: " << manual_visible_voxels.size() << endl;
+    vector<vector<vector<int>>> all_voxel_models;
 
-    return manual_visible_voxels;
+    // Set manual masks as foreground images for all cameras
+    for (int j = 0; j < 2; j++) {
+        for (int c = 0; c < 4; c++) {
+            Camera* cam = m_cam_views[c];
+            cam->setForegroundImage(manual_masks[c][j]);
+            if (cam->getForegroundImage().cols == 0) {
+                cout << "found wrong image: " << c << ", " << j << endl;
+            }
+        }
+        cout << "Getting voxel model for frame " << to_string(j) << "..." << endl;
+        vector<vector<int>> manual_visible_voxels = get_updated_voxels(reconstructor);
+        all_voxel_models.push_back(manual_visible_voxels);
+        
+        //cout << "num of voxels in manual model: " << manual_visible_voxels.size() << endl;
+    }
+
+    return all_voxel_models;
 }
 
 vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRenderer* scene3d) {
     // Hyperparameters
-    int iteration_threshold = 25;
-    float convergence_velocity = 1.15f;
+    int iteration_threshold = 60;
+    float convergence_velocity = 1.06f;
     float stdev_multiplier = 2.0f;
     float stdev_multiplier_minimum = 0.005f;
     vector<int> post_iteration_range = { -5, 5 };
-    double noise_penalty = 0.5;
+    double noise_penalty = 0.1;
 
     // Initial values
     vector<int> hsv_optima = { 128, 128, 128 }; // Start with mean values (255/2)
@@ -272,11 +276,11 @@ vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRende
     int post_element;
     double fitness;
     int j = 0;
-    vector<Mat> manual_masks = get_manual_masks(m_cam_views);
+    vector<vector<Mat>> manual_masks = get_manual_masks(m_cam_views);
     Reconstructor reconstructor(m_cam_views, true);
     vector<vector<int>> all_voxels = reconstructor.getAllVoxelCoords();
-    vector<vector<int>> manual_visible_voxels = get_manual_voxelmodel(&reconstructor, manual_masks, m_cam_views);
-    
+    vector<vector<vector<int>>> manual_visible_voxels = get_manual_voxelmodels(&reconstructor, manual_masks, m_cam_views);
+    //return { {0,0,0}, {0,0} };
 
     // Search loop
     cout << "Starting segmentation parameter tuning..." << endl;
@@ -320,14 +324,19 @@ vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRende
         scene3d->setVThreshold(hsv_sample[2]);
         scene3d->setPostProcParams(post_sample);
 
-        // Test segmentation fitness values for all cameras
-        for (int c = 0; c < m_cam_views.size(); c++) {
-            update_cam_foreground(
-                hsv_sample, m_cam_views, c, scene3d, total_pix, manual_masks, post_sample
+        // Test segmentation fitness values for all cameras and frames
+        fitness = 0.0;
+        for (int j = 0; j < 2; j++) {
+            for (int c = 0; c < m_cam_views.size(); c++) {
+                update_cam_foreground(
+                    hsv_sample, m_cam_views, c, scene3d, total_pix, manual_masks, post_sample, j
+                );
+            }
+            fitness += assess_foregrounds(
+                &manual_visible_voxels.at(j), &reconstructor, &all_voxels, noise_penalty
             );
         }
-        fitness = assess_foregrounds(
-            &manual_visible_voxels, &reconstructor, &all_voxels, noise_penalty);
+        fitness /= 2.0; // take average fitness of two sampled frames
 
         // Update if sample fitness is better than previous best value
         if (fitness > best_fitness) {
@@ -361,13 +370,13 @@ vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRende
     cout << "Found post-processing optima: " << post_optima[0] << ", " << post_optima[1];
     cout << "\nInfo about found optima:" << endl;
     
-    for (int c = 0; c < m_cam_views.size(); c++) {
-        update_cam_foreground(
-            hsv_optima, m_cam_views, c, scene3d, total_pix, manual_masks, post_optima
-        );
-    }
-    assess_foregrounds(
-        &manual_visible_voxels, &reconstructor, &all_voxels, noise_penalty);
+    //for (int c = 0; c < m_cam_views.size(); c++) {
+    //    update_cam_foreground(
+    //        hsv_optima, m_cam_views, c, scene3d, total_pix, manual_masks, post_optima, j
+    //    );
+    //}
+    //assess_foregrounds(
+    //    &manual_visible_voxels, &reconstructor, &all_voxels, noise_penalty);
 
     //waitKey();
 
