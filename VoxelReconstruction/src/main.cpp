@@ -427,7 +427,7 @@ int main(int argc, char** argv){
         else if (argv[1] == "-skip"s || argv[1] == "--skip_tuning"s) {
             VoxelReconstruction::showKeys();
             VoxelReconstruction vr(DATA_PATH, 4);
-            vr.run(argc, argv, { 0, 67, 63 }, { 0, 0 }, true, false, true);
+            vr.run(argc, argv, { 5, 28, 47 }, { -1, 3 }, true, false, true);
         }
 	}
     else {
