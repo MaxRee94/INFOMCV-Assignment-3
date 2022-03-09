@@ -150,6 +150,8 @@ public:
 	{
 		return m_camera_plane;
 	}
+
+	double Camera::getVideoFrameIndex();
 };
 
 } /* namespace nl_uu_science_gmt */

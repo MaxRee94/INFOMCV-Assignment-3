@@ -215,11 +215,42 @@ void Reconstructor::update()
 	m_visible_voxels.clear();
 	m_visible_voxels.insert(m_visible_voxels.end(), visible_voxels.begin(), visible_voxels.end());
 
-	//// Clearing previous frame voxel vector
-	//prev_visible_voxels.clear();
+	//732 frame
+	if (m_cameras[1]->getVideoFrameIndex() == 731 || m_cameras[1]->getVideoFrameIndex() == 732) {
+		Scalar colorTab[] =
+			{
+			    Scalar(0, 0, 255),
+			    Scalar(0,255,0),
+			    Scalar(255,100,100),
+			    Scalar(255,0,255),
+			    Scalar(0,255,255)
+			};
 
-	//// Inserting current frame voxels to previous frame voxels to use at the next frame
-	//std::copy(m_voxels.begin(), m_voxels.end(), back_inserter(prev_visible_voxels));
+		vector<Point2f> m_groundCoordinates(m_visible_voxels.size());
+
+		for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
+			m_groundCoordinates[i] = Point2f(m_visible_voxels[i]->x, m_visible_voxels[i]->y);
+		}
+
+		int clusterCount = 4;
+		Mat labels;
+		int attempts = 5;
+		vector<Point2f> centers;
+		kmeans(m_groundCoordinates, clusterCount, labels, TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers);
+
+		for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
+			for (size_t j = 0; j < centers.size(); j++) {
+				if (m_visible_voxels[i]->x == centers[j].x && m_visible_voxels[i]->y == centers[j].y) {
+					m_visible_voxels[i]->color = Scalar(0, 0, 255);
+				}
+				else {
+					m_visible_voxels[i]->color = Scalar(255, 255, 255);
+				}
+			}
+		}
+		
+	}
+
 }
 
 } /* namespace nl_uu_science_gmt */

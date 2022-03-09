@@ -157,6 +157,10 @@ void Camera::setVideoFrame(
 	m_video.set(CAP_PROP_POS_FRAMES, frame_number);
 }
 
+double Camera::getVideoFrameIndex() {
+	return m_video.get(CAP_PROP_POS_FRAMES);
+}
+
 /**
  * Set and return frame of the video location at the given frame number
  */

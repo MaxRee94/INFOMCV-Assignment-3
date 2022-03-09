@@ -555,6 +555,10 @@ void Glut::display()
 
 	drawVoxels();
 
+	if (scene3d.getCurrentFrame() <= 732 && scene3d.getCurrentFrame() >= 728) {
+		scene3d.setPaused(true);
+	}
+
 	if (scene3d.isShowOrg())
 		drawWCoord();
 	if (scene3d.isShowInfo())
@@ -865,7 +869,7 @@ void Glut::drawVoxels()
 		double blue = (double)color[0] / 255.0;
 		double green = (double)color[1] / 255.0;
 		double red = (double)color[2] / 255.0;
-		glColor4f(red, green, blue, 1);
+		glColor4f(voxels[v]->color[2]/255.0, voxels[v]->color[1] / 255.0, voxels[v]->color[0] / 255.0, 1);
 		glVertex3f((GLfloat) voxels[v]->x, (GLfloat) voxels[v]->y, (GLfloat) voxels[v]->z);
 	}
 

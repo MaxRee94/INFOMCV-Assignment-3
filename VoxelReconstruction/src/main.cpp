@@ -148,11 +148,11 @@ vector<Mat> get_manual_masks(vector<Camera*> m_cam_views) {
     for (int c = 0; c < m_cam_views.size(); c++) {
         // Advance cam frame to make sure it contains an active frame
         Camera* cam = m_cam_views[c];
-        cam->getVideoFrame(10);
+        cam->getVideoFrame(0);
 
         // Read- and threshold manual mask
         Mat tmp = imread(
-            DATA_PATH + "cam" + to_string(c + 1) + string(PATH_SEP) + "manual_mask.png"
+            DATA_PATH + "cam" + to_string(c + 1) + string(PATH_SEP) + "clustering.png"
         );
         vector<Mat> channels;
         split(tmp, channels);
@@ -374,6 +374,29 @@ vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRende
     return { hsv_optima, post_optima };
 }
 
+string type2str(int type) {
+    string r;
+
+    uchar depth = type & CV_MAT_DEPTH_MASK;
+    uchar chans = 1 + (type >> CV_CN_SHIFT);
+
+    switch (depth) {
+    case CV_8U:  r = "8U"; break;
+    case CV_8S:  r = "8S"; break;
+    case CV_16U: r = "16U"; break;
+    case CV_16S: r = "16S"; break;
+    case CV_32S: r = "32S"; break;
+    case CV_32F: r = "32F"; break;
+    case CV_64F: r = "64F"; break;
+    default:     r = "User"; break;
+    }
+
+    r += "C";
+    r += (chans + '0');
+
+    return r;
+}
+
 int main(int argc, char** argv){
 	using namespace literals;
 
@@ -428,6 +451,75 @@ int main(int argc, char** argv){
             VoxelReconstruction::showKeys();
             VoxelReconstruction vr(DATA_PATH, 4);
             vr.run(argc, argv, { 5, 28, 47 }, { -1, 3 }, true, false, true);
+        }
+        else if (argv[1] == "-c"s || argv[1] == "--clustering"s) {
+            VoxelReconstruction::showKeys();
+            VoxelReconstruction vr(DATA_PATH, 4);
+            vr.run(argc, argv, { 5, 28, 47 }, { -1, 3 }, true, false, true);
+            //Mat hsv_image, hsv_image_bg;
+            //cv::Mat bg = cv::imread(DATA_PATH + "cam2/" + "background.png");
+
+            //Mat src = imread(DATA_PATH + "cam2/" + "clustering.png", 1);
+            //
+            //#pragma region BgSegm
+            //cvtColor(src, hsv_image, cv::COLOR_BGR2HSV);  // from BGR to HSV color space
+            //cvtColor(bg, hsv_image_bg, cv::COLOR_BGR2HSV);  // from BGR to HSV color space
+
+            //vector<Mat> channels, bgchannels;
+            //split(hsv_image, channels);  // Split the HSV-channels for further analysis
+            //split(hsv_image_bg, bgchannels);
+
+            //// Background subtraction H
+            //Mat tmp, foreground, background;
+            //absdiff(channels[0], bgchannels[0], tmp);
+            //threshold(tmp, foreground, 5, 255, cv::THRESH_BINARY);
+
+            //// Background subtraction S
+            //absdiff(channels[1], bgchannels[1], tmp);
+            //threshold(tmp, background, 28, 255, cv::THRESH_BINARY);
+            //bitwise_and(foreground, background, foreground);
+
+            //// Background subtraction V
+            //absdiff(channels[2], bgchannels[2], tmp);
+            //threshold(tmp, background, 47, 255, cv::THRESH_BINARY);
+            //bitwise_or(foreground, background, foreground);
+            //#pragma endregion
+            //
+            //Mat samples(foreground.rows * foreground.cols, 1, CV_32F);
+
+            //for (int y = 0; y < foreground.rows; y++)
+            //    for (int x = 0; x < foreground.cols; x++)
+            //        for (int z = 0; z < 1; z++)
+            //            samples.at<float>(y + x * foreground.rows, z) = foreground.at<Vec3b>(y, x)[z];
+
+
+            //int clusterCount = 4;
+            //Mat labels;
+            //int attempts = 5;
+            //Mat centers;
+            //kmeans(samples, clusterCount, labels, TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers);
+
+
+            //Mat new_image(src.size(), src.type());
+            //for (int y = 0; y < src.rows; y++)
+            //    for (int x = 0; x < src.cols; x++)
+            //    {
+            //        int cluster_idx = labels.at<int>(y + x * src.rows, 0);
+            //        new_image.at<Vec3b>(y, x)[0] = centers.at<float>(cluster_idx, 0);
+            //        new_image.at<Vec3b>(y, x)[1] = centers.at<float>(cluster_idx, 1);
+            //        new_image.at<Vec3b>(y, x)[2] = centers.at<float>(cluster_idx, 2);
+            //    }
+            //imshow("clustered image", new_image);
+            //waitKey(0);
+
+            //Scalar colorTab[] =
+            //{
+            //    Scalar(0, 0, 255),
+            //    Scalar(0,255,0),
+            //    Scalar(255,100,100),
+            //    Scalar(255,0,255),
+            //    Scalar(0,255,255)
+            //};
         }
 	}
     else {
