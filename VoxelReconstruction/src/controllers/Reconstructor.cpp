@@ -216,7 +216,7 @@ void Reconstructor::update()
 	m_visible_voxels.insert(m_visible_voxels.end(), visible_voxels.begin(), visible_voxels.end());
 
 	//732 frame
-	if (m_cameras[1]->getVideoFrameIndex() == 731 || m_cameras[1]->getVideoFrameIndex() == 732) {
+	if (m_cameras[1]->getVideoFrameIndex() == 1 || m_cameras[1]->getVideoFrameIndex() == 2) {
 		Scalar colorTab[] =
 			{
 			    Scalar(0, 0, 255),
@@ -238,17 +238,18 @@ void Reconstructor::update()
 		vector<Point2f> centers;
 		kmeans(m_groundCoordinates, clusterCount, labels, TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers);
 
+		vector<vector<Vec3b>> people_Points = vector<vector<Vec3b>>(4);
+		Mat frame = m_cameras[1]->getVideoFrame(1);
+		Point proj;
+		Vec3b p_color;
+
 		for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
-			for (size_t j = 0; j < centers.size(); j++) {
-				if (m_visible_voxels[i]->x == centers[j].x && m_visible_voxels[i]->y == centers[j].y) {
-					m_visible_voxels[i]->color = Scalar(0, 0, 255);
-				}
-				else {
-					m_visible_voxels[i]->color = Scalar(255, 255, 255);
-				}
-			}
+			int clusterIdx = labels.at<int>(i);
+			m_visible_voxels[i]->color = colorTab[clusterIdx];
+			p_color = frame.at<Vec3b>(m_visible_voxels[i]->camera_projection[1]);
+			
+			people_Points[clusterIdx].push_back(p_color);
 		}
-		
 	}
 
 }

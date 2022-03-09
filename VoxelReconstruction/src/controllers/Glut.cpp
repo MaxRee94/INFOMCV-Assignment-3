@@ -555,7 +555,7 @@ void Glut::display()
 
 	drawVoxels();
 
-	if (scene3d.getCurrentFrame() <= 732 && scene3d.getCurrentFrame() >= 728) {
+	if (scene3d.getCurrentFrame() <= 5 && scene3d.getCurrentFrame() >= 0) {
 		scene3d.setPaused(true);
 	}
 
@@ -617,8 +617,8 @@ void Glut::update(
 		scene3d.setPreviousFrame(scene3d.getCurrentFrame());
 	}
 	else if (scene3d.getHThreshold() != scene3d.getPHThreshold() || scene3d.getSThreshold() != scene3d.getPSThreshold()
-			|| scene3d.getVThreshold() != scene3d.getPVThreshold() || scene3d.getRChannel() != scene3d.getPRChannel()
-			|| scene3d.getGChannel() != scene3d.getPGChannel() || scene3d.getBChannel() != scene3d.getPBChannel())
+			|| scene3d.getVThreshold() != scene3d.getPVThreshold() /*|| scene3d.getRChannel() != scene3d.getPRChannel()
+			|| scene3d.getGChannel() != scene3d.getPGChannel() || scene3d.getBChannel() != scene3d.getPBChannel()*/)
 	{
 		// Update the scene if one of the HSV sliders was moved (when the video is paused)
 		scene3d.processFrame();
