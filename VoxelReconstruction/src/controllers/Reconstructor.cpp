@@ -10,6 +10,7 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/operations.hpp>
 #include <opencv2/core/types_c.h>
+#include <opencv2/opencv.hpp>
 #include <cassert>
 #include <iostream>
 #include<conio.h>
@@ -19,6 +20,7 @@
 
 using namespace std;
 using namespace cv;
+using namespace cv::ml;
 
 namespace nl_uu_science_gmt
 {
@@ -238,7 +240,8 @@ void Reconstructor::update()
 		vector<Point2f> centers;
 		kmeans(m_groundCoordinates, clusterCount, labels, TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers);
 
-		vector<vector<Vec3b>> people_Points = vector<vector<Vec3b>>(4);
+		vector<Mat> people_Points = vector<Mat>(4);
+
 		Mat frame = m_cameras[1]->getVideoFrame(1);
 		Point proj;
 		Vec3b p_color;
@@ -250,6 +253,49 @@ void Reconstructor::update()
 			
 			people_Points[clusterIdx].push_back(p_color);
 		}
+
+		for (size_t i = 0; i < 4; i++)
+		{
+			Ptr<EM> em_model = EM::create();
+			//Set K
+			em_model->setClustersNumber(4);
+			//Set covariance matrix type
+			em_model->setCovarianceMatrixType(EM::COV_MAT_SPHERICAL);
+			//Convergence condition
+			em_model->setTermCriteria(TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 100, 0.1));
+
+			people_Points[i].convertTo(people_Points[i], CV_32FC1);
+
+			//train
+			em_model->trainEM(people_Points[i], noArray(), labels, noArray());
+
+			// classify every image pixels
+			Mat sample(1, 2, CV_32FC1);
+
+			for (int row = 0; row < frame.rows; row++) {
+				for (int col = 0; col < frame.cols; col++) {
+					sample.at<float>(0) = (float)col;
+					sample.at<float>(1) = (float)row;
+					//int response = cvRound(em_model->predict2(sample, noArray())[1]);
+					Vec2d predict = em_model->predict2(sample, noArray()); // Prophesy
+					int response = cvRound(predict[1]); // response is the current classification given
+					Scalar c = Scalar(255, 0, 0);
+					circle(frame, Point(col, row), 1, c * 0.75, -1);
+				}
+			}
+
+			imshow("GMM-EM Demo", frame);
+
+			waitKey(0);
+			destroyAllWindows();
+
+			// draw the clusters
+			/*for (int i = 0; i < 4; i++) {
+				Point p(cvRound(people_Points[i].at<float>(i, 0)), cvRound(points.at<float>(i, 1)));
+				circle(frame, p, 1, Scalar(255, 255, 0), -1);
+			}*/
+		}
+
 	}
 
 }
