@@ -229,6 +229,7 @@ void Reconstructor::update()
 
 	vector<Point2f> m_groundCoordinates(m_visible_voxels.size());
 
+	
 	for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
 		m_groundCoordinates[i] = Point2f(m_visible_voxels[i]->x, m_visible_voxels[i]->y);
 	}
@@ -284,11 +285,10 @@ void Reconstructor::update()
 			em_model->setTermCriteria(TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 100, 0.1));
 
 			people_Points[clusterIdx].convertTo(people_Points[clusterIdx], CV_32FC1);
-			cout << "p color height (rows): " << people_Points[clusterIdx].rows << endl;
-			cout << "p color width (cols): " << people_Points[clusterIdx].cols << endl;
 
 			//train
-			em_model->trainEM(people_Points[clusterIdx], noArray(), labels, noArray());
+			Mat training_labels;
+			em_model->trainEM(people_Points[clusterIdx], noArray(), training_labels, noArray());
 			
 			color_models.push_back(em_model);
 			//waitKey(0);
