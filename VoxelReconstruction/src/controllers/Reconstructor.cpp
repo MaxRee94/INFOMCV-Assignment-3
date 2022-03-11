@@ -239,8 +239,6 @@ void Reconstructor::update()
 	vector<Point2f> centers;
 	kmeans(m_groundCoordinates, clusterCount, labels, TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers);
 
-	vector<Mat> people_Points = vector<Mat>(4);
-
 	Mat frame = m_cameras[1]->getVideoFrame(1);
 	Point proj;
 	Vec3b p_color;
@@ -305,15 +303,16 @@ void Reconstructor::update()
 		vector<int> clusterLabels;
 		vector<int> labelCounts;
 		for (int row = 0; row < people_Points[clusterIndx].rows; row++) {
-			sample.at<double>(0, 0) = people_Points[clusterIndx].at<double>(row, 0);
-			sample.at<double>(1, 0) = people_Points[clusterIndx].at<double>(row, 1);
-			sample.at<double>(2, 0) = people_Points[clusterIndx].at<double>(row, 2);
+			sample.at<double>(0) = people_Points[clusterIndx].at<int>(row, 0);
+			sample.at<double>(1) = people_Points[clusterIndx].at<int>(row, 1);
+			sample.at<double>(2) = people_Points[clusterIndx].at<int>(row, 2);
 
 			int label;
-			float best_likelihood = 0;
+			double best_likelihood = -std::numeric_limits<double>::max();
 			for (int modelIndx = 0; modelIndx < 4; modelIndx++) {
 				Vec2d predict = color_models[modelIndx]->predict2(sample, noArray()); // Prophesy
-				float likelihood = predict[0];
+
+				double likelihood = predict[0];
 				if (likelihood > best_likelihood) {
 					label = modelIndx;
 					best_likelihood = likelihood;
