@@ -245,6 +245,8 @@ void Reconstructor::update()
 	Point proj;
 	Vec3b p_color;
 
+<<<<<<< Updated upstream
+=======
 	// Count cluster sizes
 	vector<int> clusterSizes = {0,0,0,0};
 	for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
@@ -260,16 +262,22 @@ void Reconstructor::update()
 
 	// Get color matrices of visible voxels of each cluster
 	vector<int> clusterPointIndices = { 0,0,0,0 };
-
+>>>>>>> Stashed changes
 	for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
 		int clusterIdx = labels.at<int>(i);
 		p_color = frame.at<Vec3b>(m_visible_voxels[i]->camera_projection[1]);
 
+<<<<<<< Updated upstream
+		people_Points[clusterIdx].at<double>(i, 0) = p_color[0];
+		people_Points[clusterIdx].at<double>(i, 1) = p_color[1];
+		people_Points[clusterIdx].at<double>(i, 2) = p_color[2];
+=======
 		people_Points[clusterIdx].at<double>(clusterPointIndices[clusterIdx], 0) = (double)p_color[0];
 		people_Points[clusterIdx].at<double>(clusterPointIndices[clusterIdx], 1) = (double)p_color[1];
 		people_Points[clusterIdx].at<double>(clusterPointIndices[clusterIdx], 2) = (double)p_color[2];
 
 		clusterPointIndices[clusterIdx]++;
+>>>>>>> Stashed changes
 	}
 
 	if (m_cameras[1]->getVideoFrameIndex() == 1 || m_cameras[1]->getVideoFrameIndex() == 2) {
