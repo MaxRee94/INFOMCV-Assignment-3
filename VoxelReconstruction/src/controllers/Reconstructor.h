@@ -9,6 +9,7 @@
 #define RECONSTRUCTOR_H_
 
 #include <opencv2/core/core.hpp>
+#include <opencv2/opencv.hpp>
 #include <stddef.h>
 #include <vector>
 
@@ -46,6 +47,7 @@ private:
 	std::vector<Voxel*> m_voxels;           // Pointer vector to all voxels in the half-space
 	std::vector<Voxel*> m_visible_voxels;   // Pointer vector to all visible voxels
 	std::vector<Voxel*> prev_visible_voxels; // Pointer vector to all voxels of previous frame
+	std::vector<cv::Ptr<cv::ml::EM>> color_models; // vector of color models
 
 	void initialize();
 
