@@ -239,21 +239,36 @@ void Reconstructor::update()
 	vector<Point2f> centers;
 	kmeans(m_groundCoordinates, clusterCount, labels, TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers);
 
-	vector<Mat> people_Points = vector<Mat>(4);
-
 	Mat frame = m_cameras[1]->getVideoFrame(1);
 	Point proj;
 	Vec3b p_color;
 
+	// Count cluster sizes
+	vector<int> clusterSizes = {0,0,0,0};
+	for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
+		int clusterIdx = labels.at<int>(i);
+		clusterSizes[clusterIdx]++;
+	}
+
+	// Initialize people point Mats
+	vector<Mat> people_Points = vector<Mat>(4);
+	for (int i = 0; i < 4; i++) {
+		people_Points[i] = Mat(clusterSizes[i], 3, CV_64FC1);
+	}
+
+	// Get color matrices of visible voxels of each cluster
 	for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
 		int clusterIdx = labels.at<int>(i);
 		p_color = frame.at<Vec3b>(m_visible_voxels[i]->camera_projection[1]);
+		//cout << "p color size: " << p_color.cols << " x " << p_color.rows << endl;
+		//cout << "p color values: " << (int)p_color[0] << ", " << (int)p_color[1] << ", " << (int)p_color[2] << endl;
 
-		people_Points[clusterIdx].at<double>(i, 0) = p_color[0];
-		people_Points[clusterIdx].at<double>(i, 1) = p_color[1];
-		people_Points[clusterIdx].at<double>(i, 2) = p_color[2];
+		people_Points[clusterIdx].at<int>(i, 0) = (int)p_color[0];
+		people_Points[clusterIdx].at<int>(i, 1) = (int)p_color[1];
+		people_Points[clusterIdx].at<int>(i, 2) = (int)p_color[2];
 	}
 
+	// OFFLINE PHASE: Training the Color Models
 	if (m_cameras[1]->getVideoFrameIndex() == 1 || m_cameras[1]->getVideoFrameIndex() == 2) {
 		color_models.clear();
 		
