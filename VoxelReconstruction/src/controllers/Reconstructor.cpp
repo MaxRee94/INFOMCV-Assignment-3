@@ -302,9 +302,13 @@ void Reconstructor::update()
 	// Online classification
 	Mat sample(1, 3, CV_64FC1);
 	std::map<int, int> clusterClassifications;
+	float likelihood_difference_threshold = 1.5;
 	for (int clusterIndx = 0; clusterIndx < 4; clusterIndx++) {
 		vector<int> clusterLabels;
 		vector<int> labelCounts;
+		//double avg_likelihood = 0.0;
+		//double abs_best_likelihood = -std::numeric_limits<double>::max();
+		//double abs_worst_likelihood = 0.0;
 		for (int row = 0; row < people_Points[clusterIndx].rows; row++) {
 			
 			sample.at<double>(0) = people_Points[clusterIndx].at<double>(row, 0);
@@ -313,18 +317,41 @@ void Reconstructor::update()
 
 			int label;
 			double best_likelihood = -std::numeric_limits<double>::max();
+			vector<double> likelihoods;
 			for (int modelIndx = 0; modelIndx < 4; modelIndx++) {
 				Vec2d predict = color_models[modelIndx]->predict(sample, noArray());
 				Vec2d predict2 = color_models[modelIndx]->predict2(sample, noArray());
 
-				double likelihood = predict[0];
+				double likelihood = predict2[0];
+				likelihoods.push_back(likelihood);
 				if (likelihood > best_likelihood) {
 					label = modelIndx;
 					best_likelihood = likelihood;
 				}
+				/*if (likelihood > abs_best_likelihood) {
+					abs_best_likelihood = likelihood;
+				}
+				if (likelihood < abs_worst_likelihood) {
+					abs_worst_likelihood = likelihood;
+				}*/
+				//avg_likelihood += likelihood;
 			}
-			clusterLabels.push_back(label);
+			vector<double> diffs;
+			for (int i = 0; i < 4; i++) {
+				if (likelihoods[i] != best_likelihood) {
+					diffs.push_back(best_likelihood - likelihoods[i]);
+				}
+			}
+			double diff = *min_element(diffs.begin(), diffs.end());
+			//cout << "minimum difference in likelihoods: " << diff << endl;
+			if (diff >= likelihood_difference_threshold) {
+				clusterLabels.push_back(label);
+			}
 		}
+		//avg_likelihood /= (4 * people_Points[clusterIndx].rows);
+		//cout << "average likelihood: " << avg_likelihood << endl;
+		//cout << "abs best likelihood: " << abs_best_likelihood << endl;
+		//cout << "abs worst likelihood: " << abs_worst_likelihood << endl;
 		int final_label;
 		int highest_count = 0;
 		for (int l = 0; l < 4; l++) {
