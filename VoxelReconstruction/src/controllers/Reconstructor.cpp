@@ -32,7 +32,7 @@ namespace nl_uu_science_gmt
 Reconstructor::Reconstructor(
 		const vector<Camera*> &cs, bool init_voxels) :
 				m_cameras(cs),
-				m_height(2048),
+				m_height(4096),
 				m_step(32)
 {
 	for (size_t c = 0; c < m_cameras.size(); ++c)
@@ -75,8 +75,8 @@ void Reconstructor::initialize()
 	// Cube dimensions from [(-m_height, m_height), (-m_height, m_height), (0, m_height)]
 	const int xL = -m_height;
 	const int xR = m_height;
-	const int yL = -m_height;
-	const int yR = m_height;
+	const int yL = -m_height + 100;
+	const int yR = m_height + 100;
 	const int zL = 0;
 	const int zR = m_height;
 	const int plane_y = (yR - yL) / m_step;
