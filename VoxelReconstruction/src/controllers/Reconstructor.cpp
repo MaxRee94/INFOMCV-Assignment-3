@@ -240,7 +240,7 @@ void Reconstructor::update()
 	vector<Point2f> centers;
 	kmeans(m_groundCoordinates, clusterCount, labels, TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers);
 
-	Mat frame = m_cameras[1]->getVideoFrame(1);
+	Mat frame = m_cameras[1]->getFrame();
 	Point proj;
 	Vec3b p_color;
 
@@ -271,6 +271,12 @@ void Reconstructor::update()
 		clusterPointIndices[clusterIdx]++;
 	}
 
+	for (size_t i = 0; i < m_cameras.size(); i++)
+	{
+		int j = m_cameras[i]->getVideoFrameIndex();
+		cout << "Camera " << i << " frame " << j << endl;
+	}
+
 	if (m_cameras[1]->getVideoFrameIndex() == 1 || m_cameras[1]->getVideoFrameIndex() == 2) {
 		color_models.clear();
 		
@@ -284,17 +290,14 @@ void Reconstructor::update()
 			//Convergence condition
 			em_model->setTermCriteria(TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 100, 0.1));
 
-			people_Points[clusterIdx].convertTo(people_Points[clusterIdx], CV_32FC1);
-
 			//train
 			Mat training_labels;
 			em_model->trainEM(people_Points[clusterIdx], noArray(), training_labels, noArray());
 			
 			color_models.push_back(em_model);
-			//waitKey(0);
-			//destroyAllWindows();
 		}
 	}
+
 
 	// Online classification
 	Mat sample(1, 3, CV_64FC1);
@@ -303,14 +306,16 @@ void Reconstructor::update()
 		vector<int> clusterLabels;
 		vector<int> labelCounts;
 		for (int row = 0; row < people_Points[clusterIndx].rows; row++) {
-			sample.at<double>(0) = people_Points[clusterIndx].at<int>(row, 0);
-			sample.at<double>(1) = people_Points[clusterIndx].at<int>(row, 1);
-			sample.at<double>(2) = people_Points[clusterIndx].at<int>(row, 2);
+			
+			sample.at<double>(0) = people_Points[clusterIndx].at<double>(row, 0);
+			sample.at<double>(1) = people_Points[clusterIndx].at<double>(row, 1);
+			sample.at<double>(2) = people_Points[clusterIndx].at<double>(row, 2);
 
 			int label;
 			double best_likelihood = -std::numeric_limits<double>::max();
 			for (int modelIndx = 0; modelIndx < 4; modelIndx++) {
-				Vec2d predict = color_models[modelIndx]->predict2(sample, noArray()); // Prophesy
+				Vec2d predict = color_models[modelIndx]->predict(sample, noArray());
+				Vec2d predict2 = color_models[modelIndx]->predict2(sample, noArray());
 
 				double likelihood = predict[0];
 				if (likelihood > best_likelihood) {
@@ -339,6 +344,7 @@ void Reconstructor::update()
 		int label = clusterClassifications[clusterIdx];
 		m_visible_voxels[i]->color = colorTab[label];
 	}
+	
 }
 
 } /* namespace nl_uu_science_gmt */
