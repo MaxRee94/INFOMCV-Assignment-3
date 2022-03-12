@@ -32,7 +32,7 @@ namespace nl_uu_science_gmt
 Reconstructor::Reconstructor(
 		const vector<Camera*> &cs, bool init_voxels) :
 				m_cameras(cs),
-				m_height(2048),
+				m_height(4096),
 				m_step(32)
 {
 	for (size_t c = 0; c < m_cameras.size(); ++c)
@@ -240,7 +240,7 @@ void Reconstructor::update()
 	vector<Point2f> centers;
 	kmeans(m_groundCoordinates, clusterCount, labels, TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers);
 
-	Mat frame = m_cameras[1]->getVideoFrame(1);
+	Mat frame = m_cameras[1]->getFrame();
 	Point proj;
 	Vec3b p_color;
 
@@ -260,16 +260,41 @@ void Reconstructor::update()
 	// Get color matrices of visible voxels of each cluster
 	vector<int> clusterPointIndices = { 0,0,0,0 };
 
+	Mat debugMat(frame.rows, frame.cols, CV_8UC3);
+	Mat debugMat1(frame.rows, frame.cols, CV_8UC3);
+	Mat debugMat2(frame.rows, frame.cols, CV_8UC3);
+	Mat debugMat3(frame.rows, frame.cols, CV_8UC3);
+	vector<Point> clust1Indices;
+
 	for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
 		int clusterIdx = labels.at<int>(i);
 		p_color = frame.at<Vec3b>(m_visible_voxels[i]->camera_projection[1]);
+		if (clusterIdx == 0) {
+			debugMat.at<Vec3b>(m_visible_voxels[i]->camera_projection[1]) = p_color;
+		}
+		if (clusterIdx == 1) {
+			Point p = m_visible_voxels[i]->camera_projection[1];
+			debugMat1.at<Vec3b>(p) = p_color;
+			clust1Indices.push_back(p);
+		}
+		if (clusterIdx == 2) {
+			debugMat2.at<Vec3b>(m_visible_voxels[i]->camera_projection[1]) = p_color;
+		}
+		if (clusterIdx == 3) {
+			debugMat3.at<Vec3b>(m_visible_voxels[i]->camera_projection[1]) = p_color;
+		}
 
-		people_Points[clusterIdx].at<double>(clusterPointIndices[clusterIdx], 0) = (double)p_color[0];
-		people_Points[clusterIdx].at<double>(clusterPointIndices[clusterIdx], 1) = (double)p_color[1];
-		people_Points[clusterIdx].at<double>(clusterPointIndices[clusterIdx], 2) = (double)p_color[2];
+		people_Points[clusterIdx].at<double>(clusterPointIndices[clusterIdx], 0) = p_color[0];
+		people_Points[clusterIdx].at<double>(clusterPointIndices[clusterIdx], 1) = p_color[1];
+		people_Points[clusterIdx].at<double>(clusterPointIndices[clusterIdx], 2) = p_color[2];
 
 		clusterPointIndices[clusterIdx]++;
 	}
+
+	imshow("debug mat 1", debugMat);
+	imshow("debug mat 2", debugMat1);
+	imshow("debug mat 3", debugMat2);
+	imshow("debug mat 4", debugMat3);
 
 	if (m_cameras[1]->getVideoFrameIndex() == 1 || m_cameras[1]->getVideoFrameIndex() == 2) {
 		color_models.clear();
@@ -282,9 +307,9 @@ void Reconstructor::update()
 			//Set covariance matrix type
 			em_model->setCovarianceMatrixType(EM::COV_MAT_SPHERICAL);
 			//Convergence condition
-			em_model->setTermCriteria(TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 100, 0.1));
+			em_model->setTermCriteria(TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 100, 0.0001));
 
-			people_Points[clusterIdx].convertTo(people_Points[clusterIdx], CV_32FC1);
+			//people_Points[clusterIdx].convertTo(people_Points[clusterIdx], CV_32FC1);
 
 			//train
 			Mat training_labels;
@@ -299,13 +324,23 @@ void Reconstructor::update()
 	// Online classification
 	Mat sample(1, 3, CV_64FC1);
 	std::map<int, int> clusterClassifications;
+	Mat onlineDebugMat(frame.rows, frame.cols, CV_8UC3);
 	for (int clusterIndx = 0; clusterIndx < 4; clusterIndx++) {
+		double avg_likelihood = 0;
 		vector<int> clusterLabels;
-		vector<int> labelCounts;
 		for (int row = 0; row < people_Points[clusterIndx].rows; row++) {
+			double b = people_Points[clusterIndx].at<int>(row, 0);
+			double g = people_Points[clusterIndx].at<int>(row, 1);
+			double r = people_Points[clusterIndx].at<int>(row, 2);
 			sample.at<double>(0) = people_Points[clusterIndx].at<int>(row, 0);
 			sample.at<double>(1) = people_Points[clusterIndx].at<int>(row, 1);
 			sample.at<double>(2) = people_Points[clusterIndx].at<int>(row, 2);
+
+			if (clusterIndx == 1) {
+				Point p = clust1Indices[row];
+				Vec3b color = Vec3b(b, g, r);
+				onlineDebugMat.at<Vec3b>(p) = color;
+			}
 
 			int label;
 			double best_likelihood = -std::numeric_limits<double>::max();
@@ -318,20 +353,26 @@ void Reconstructor::update()
 					best_likelihood = likelihood;
 				}
 			}
+			avg_likelihood += best_likelihood;
 			clusterLabels.push_back(label);
 		}
+		avg_likelihood /= (double)people_Points[clusterIndx].rows;
+		cout << "average likelihood for cluster " << clusterIndx << ": " << avg_likelihood << endl;
 		int final_label;
-		int highest_count = 0;
+		int highest_ratio = 0;
 		for (int l = 0; l < 4; l++) {
 			int labelCount = std::count(clusterLabels.begin(), clusterLabels.end(), l);
-			labelCounts.push_back(labelCount);
-			if (labelCount > highest_count) {
-				highest_count = labelCount;
+			float labelRatio = float(labelCount) / (float)clusterSizes[clusterIndx];
+			if (labelRatio > highest_ratio) {
+				highest_ratio = labelRatio;
 				final_label = l;
 			}
 		}
 		clusterClassifications[clusterIndx] = final_label;
 	}
+	
+	imshow("Online debug mat", onlineDebugMat);
+	waitKey(0);
 
 	// Assign colors to each voxel based on GMM predictions
 	for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
