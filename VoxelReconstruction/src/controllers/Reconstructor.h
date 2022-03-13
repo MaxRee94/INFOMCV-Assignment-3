@@ -86,13 +86,9 @@ public:
 		return voxel_coords;
 	}
 
-	vector<Voxel*> get_floodfill_subset(vector<Voxel*>*, Voxel*);
+	void get_floodfill_subset(std::vector<Voxel*>*, std::vector<int>* included_indices, std::vector<Voxel*>*, Voxel*);
 
 	bool is_person(std::vector<Voxel*>* subset);
-
-	void voxelwise_and(
-		vector<Voxel*>*, vector<Voxel*>*, vector<Voxel*>*
-	);
 
 	const std::vector<Voxel*>& getVoxels() const
 	{

@@ -174,8 +174,24 @@ double distanceCalculate(double x1, double y1, double x2, double y2)
 	return dist;
 }
 
-vector<Reconstructor::Voxel*> Reconstructor::get_floodfill_subset(std::vector<Reconstructor::Voxel*>* cluster, Reconstructor::Voxel* sample_vox) {
-	sample_vox;
+void Reconstructor::get_floodfill_subset(std::vector<Reconstructor::Voxel*>* cluster, vector<int>* included_indices, std::vector<Reconstructor::Voxel*>* subset, Reconstructor::Voxel* sample_vox) {
+	vector<int> x_neighbor_range = { sample_vox->x - m_step - 1, sample_vox->x + m_step + 1 };
+	vector<int> y_neighbor_range = { sample_vox->y - m_step - 1, sample_vox->y + m_step + 1 };
+	vector<int> z_neighbor_range = { sample_vox->z - m_step - 1, sample_vox->z + m_step + 1 };
+	for (int i = 0; i < cluster->size(); i++) {
+		if (find(included_indices->begin(), included_indices->end(), i) != included_indices->end()) continue;
+
+		Reconstructor::Voxel* vox = cluster->at(i);
+		bool x_neighbor = (x_neighbor_range[0] <= vox->x <= x_neighbor_range[1]);
+		bool y_neighbor = (y_neighbor_range[0] <= vox->y <= y_neighbor_range[1]);
+		bool z_neighbor = (z_neighbor_range[0] <= vox->z <= z_neighbor_range[1]);
+		if (x_neighbor && y_neighbor && z_neighbor) {
+			subset->push_back(vox);
+			included_indices->push_back(i);
+			get_floodfill_subset(cluster, included_indices, subset, vox); // Recurse
+			break;
+		}
+	}
 }
 
 bool Reconstructor::is_person(std::vector<Reconstructor::Voxel*>* subset) {
@@ -263,7 +279,7 @@ void Reconstructor::update()
 	kmeans(m_groundCoordinates, clusterCount, labels, TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers);
 
 	// Make separate cluster vectors
-	vector<vector<Voxel*>> clusters;
+	vector<vector<Voxel*>> clusters = { {}, {}, {}, {}};
 	int clusterIdx;
 	for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
 		clusterIdx = labels.at<int>(i);
@@ -272,15 +288,20 @@ void Reconstructor::update()
 
 	// Filter out floating voxel clouds
 	std::vector<Voxel*> filtered_visible_voxels;
+	vector<Voxel*> subset;
 	for (int i = 0; i < 4; i++) {
 		vector<Voxel*> cluster = clusters[i];
 		while (true) {
+			subset.clear();
 			int randomIndex = rand() % cluster.size();
 			Voxel* vox_sample = cluster[randomIndex];
-			vector<Voxel*> subset = get_floodfill_subset(&cluster, vox_sample);
+			subset.push_back(vox_sample);
+			vector<int> included_indices = {randomIndex};
+			get_floodfill_subset(&cluster, &included_indices, &subset, vox_sample);
 			bool person = is_person(&subset);
 			if (person) {
 				// Add all voxels from the subset to the visible voxels vector.
+				cout << "Setting visible voxels for cluster " << i << "..." << endl;
 				for (int j = 0; j < subset.size(); j++) {
 					filtered_visible_voxels.push_back(subset[j]);
 				}
@@ -300,10 +321,7 @@ void Reconstructor::update()
 		m_groundCoordinates[i] = Point2f(m_visible_voxels[i]->x, m_visible_voxels[i]->y);
 	}
 
-	int clusterCount = 4;
-	Mat labels;
-	int attempts = 5;
-	vector<Point2f> centers;
+	centers.clear();
 	kmeans(m_groundCoordinates, clusterCount, labels, TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers);
 
 	// Get frame(s) of camera(s) for voxel projection
