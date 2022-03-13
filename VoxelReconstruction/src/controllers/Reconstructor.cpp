@@ -190,35 +190,6 @@ bool Reconstructor::is_person(std::vector<Reconstructor::Voxel*>* subset) {
 }
 
 /**
-* Add voxels from cluster to filtered_visible_voxels if and only if they are a member of the subset.
-*/
-void Reconstructor::voxelwise_and(
-	vector<Reconstructor::Voxel*>* cluster, vector<Reconstructor::Voxel*>* subset, vector<Reconstructor::Voxel*>* filtered_visible_voxels
-) {
-	int x, y, z;
-	int x_s, y_s, z_s;
-	Voxel* vox;
-	Voxel* vox_s;
-	for (int i = 0; i < cluster->size(); i++) {
-		vox = cluster->at(i);
-		x = vox->x;
-		y = vox->y;
-		z = vox->z;
-		for (int j = 0; j < subset->size(); j++) {
-			vox_s = subset->at(j);
-			x_s = vox_s->x;
-			y_s = vox_s->y;
-			z_s = vox_s->z;
-
-			// Check if cluster voxel is member of subset
-			if (x_s == x && y_s == y && z_s == z) {
-				filtered_visible_voxels->push_back(vox);
-			}
-		}
-	}
-}
-
-/**
  * Count the amount of camera's each voxel in the space appears on,
  * if that amount equals the amount of cameras, add that voxel to the
  * visible_voxels vector
@@ -309,7 +280,12 @@ void Reconstructor::update()
 			vector<Voxel*> subset = get_floodfill_subset(&cluster, vox_sample);
 			bool person = is_person(&subset);
 			if (person) {
-				voxelwise_and(&cluster, &subset, &filtered_visible_voxels);
+				// Add all voxels from the subset to the visible voxels vector.
+				for (int j = 0; j < subset.size(); j++) {
+					filtered_visible_voxels.push_back(subset[j]);
+				}
+
+				// All remaining voxels in the cluster can be ignored
 				break;
 			}
 		}
