@@ -32,7 +32,7 @@ namespace nl_uu_science_gmt
 Reconstructor::Reconstructor(
 		const vector<Camera*> &cs, bool init_voxels) :
 				m_cameras(cs),
-				m_height(2048),
+				m_height(4096),
 				m_step(32)
 {
 	vector<Point2f> temp = vector<Point2f>(NULL);
@@ -304,68 +304,34 @@ void Reconstructor::update()
 	// Online classification
 	Mat sample(1, 3, CV_64FC1);
 	std::map<int, int> clusterClassifications;
-	float likelihood_difference_threshold = 1.5;
 	for (int clusterIndx = 0; clusterIndx < 4; clusterIndx++) {
 		vector<int> clusterLabels;
+		vector<double> avg_model_likelihoods = { 0.0, 0.0, 0.0, 0.0 };
 		vector<int> labelCounts;
-		//double avg_likelihood = 0.0;
-		//double abs_best_likelihood = -std::numeric_limits<double>::max();
-		//double abs_worst_likelihood = 0.0;
+		int final_label;
 		for (int row = 0; row < people_Points[clusterIndx].rows; row++) {
 			
 			sample.at<double>(0) = people_Points[clusterIndx].at<double>(row, 0);
 			sample.at<double>(1) = people_Points[clusterIndx].at<double>(row, 1);
 			sample.at<double>(2) = people_Points[clusterIndx].at<double>(row, 2);
 
-			int label;
-			double best_likelihood = -std::numeric_limits<double>::max();
-			vector<double> likelihoods;
 			for (int modelIndx = 0; modelIndx < 4; modelIndx++) {
 				Vec2d predict = color_models[modelIndx]->predict(sample, noArray());
 				Vec2d predict2 = color_models[modelIndx]->predict2(sample, noArray());
 
 				double likelihood = predict2[0];
-				likelihoods.push_back(likelihood);
-				if (likelihood > best_likelihood) {
-					label = modelIndx;
-					best_likelihood = likelihood;
-				}
-				/*if (likelihood > abs_best_likelihood) {
-					abs_best_likelihood = likelihood;
-				}
-				if (likelihood < abs_worst_likelihood) {
-					abs_worst_likelihood = likelihood;
-				}*/
-				//avg_likelihood += likelihood;
+				avg_model_likelihoods[modelIndx] += likelihood;
 			}
-			vector<double> diffs;
-			for (int i = 0; i < 4; i++) {
-				if (likelihoods[i] != best_likelihood) {
-					diffs.push_back(best_likelihood - likelihoods[i]);
-				}
-			}
-			double diff = *min_element(diffs.begin(), diffs.end());
-			//cout << "minimum difference in likelihoods: " << diff << endl;
-			if (diff >= likelihood_difference_threshold) {
-				clusterLabels.push_back(label);
+		}
+		double best_likelihood = -1e15;
+		for (int q = 0; q < 4; q++) {
+			avg_model_likelihoods[q] /= (double)people_Points[clusterIndx].rows;
+			if (avg_model_likelihoods[q] > best_likelihood) {
+				best_likelihood = avg_model_likelihoods[q];
+				final_label = q;
 			}
 		}
 
-		//avg_likelihood /= (4 * people_Points[clusterIndx].rows);
-		//cout << "average likelihood: " << avg_likelihood << endl;
-		//cout << "abs best likelihood: " << abs_best_likelihood << endl;
-		//cout << "abs worst likelihood: " << abs_worst_likelihood << endl;
-		int final_label;
-		int highest_count = 0;
-		for (int l = 0; l < 4; l++) {
-			int labelCount = std::count(clusterLabels.begin(), clusterLabels.end(), l);
-			labelCounts.push_back(labelCount);
-			if (labelCount > highest_count) {
-				highest_count = labelCount;
-				final_label = l;
-			}
-
-		}
 		clusterClassifications[clusterIndx] = final_label;
 
 		// Add vertices into main center vector
