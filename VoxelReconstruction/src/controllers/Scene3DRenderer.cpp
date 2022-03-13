@@ -170,7 +170,7 @@ Mat Scene3DRenderer::applyContourFiltering(Mat input, Mat camFrame, float toplev
 			drawContours(input, contours, c, white, FILLED, 8, hierarchy);
 		}
 	}
-	cv::imshow(pass_name, camFrame);
+	//cv::imshow(pass_name, camFrame);
 	return input;
 }
 
@@ -184,7 +184,7 @@ void Scene3DRenderer::initPostProcessed(Mat input, Camera* camera) {
 	Point anchor = Point(-1, -1);
 	Mat kernel = Mat();
 	
-	cv::imshow("Before post proc", input);
+	//cv::imshow("Before post proc", input);
 	for (int i = 0; i < eros_dilat_params.size(); i++) {
 		if (eros_dilat_params[i] < 0) {
 			erode(input, input, kernel, anchor, -eros_dilat_params[i]);
@@ -206,12 +206,12 @@ void Scene3DRenderer::initPostProcessed(Mat input, Camera* camera) {
 	}
 
 	// Find contours
-	cv::imshow("After eros/dil, before contours", input);
+	//cv::imshow("After eros/dil, before contours", input);
 	//cout << "contour params number: " << contour_params.size() << endl;
 	input = applyContourFiltering(input, camFrame, contour_params[2], contour_params[3], "contours pass 2");
 	
 	threshold(input, input, 20, 255, CV_THRESH_BINARY);
-	cv::imshow("AFter", input);
+	//cv::imshow("AFter", input);
 	
 	//waitKey(0);
 

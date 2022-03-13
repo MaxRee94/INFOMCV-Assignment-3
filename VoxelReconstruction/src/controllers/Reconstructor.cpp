@@ -16,6 +16,7 @@
 #include<conio.h>
 #include<math.h>
 
+
 #include "../utilities/General.h"
 
 using namespace std;
@@ -32,7 +33,7 @@ namespace nl_uu_science_gmt
 Reconstructor::Reconstructor(
 		const vector<Camera*> &cs, bool init_voxels) :
 				m_cameras(cs),
-				m_height(4096),
+				m_height(2048),
 				m_step(32)
 {
 	vector<Point2f> temp = vector<Point2f>(NULL);
@@ -173,6 +174,50 @@ double distanceCalculate(double x1, double y1, double x2, double y2)
 	return dist;
 }
 
+vector<Reconstructor::Voxel*> Reconstructor::get_floodfill_subset(std::vector<Reconstructor::Voxel*>* cluster, Reconstructor::Voxel* sample_vox) {
+	sample_vox;
+}
+
+bool Reconstructor::is_person(std::vector<Reconstructor::Voxel*>* subset) {
+	bool is_person = false;
+	float height_thresh = 0.05 * m_height;
+	for (int i = 0; i < subset->size(); i++) {
+		if (subset->at(i)->z < height_thresh) {
+			is_person = true;
+		}
+	}
+	return is_person;
+}
+
+/**
+* Add voxels from cluster to filtered_visible_voxels if and only if they are a member of the subset.
+*/
+void Reconstructor::voxelwise_and(
+	vector<Reconstructor::Voxel*>* cluster, vector<Reconstructor::Voxel*>* subset, vector<Reconstructor::Voxel*>* filtered_visible_voxels
+) {
+	int x, y, z;
+	int x_s, y_s, z_s;
+	Voxel* vox;
+	Voxel* vox_s;
+	for (int i = 0; i < cluster->size(); i++) {
+		vox = cluster->at(i);
+		x = vox->x;
+		y = vox->y;
+		z = vox->z;
+		for (int j = 0; j < subset->size(); j++) {
+			vox_s = subset->at(j);
+			x_s = vox_s->x;
+			y_s = vox_s->y;
+			z_s = vox_s->z;
+
+			// Check if cluster voxel is member of subset
+			if (x_s == x && y_s == y && z_s == z) {
+				filtered_visible_voxels->push_back(vox);
+			}
+		}
+	}
+}
+
 /**
  * Count the amount of camera's each voxel in the space appears on,
  * if that amount equals the amount of cameras, add that voxel to the
@@ -219,6 +264,7 @@ void Reconstructor::update()
 			visible_voxels.push_back(voxel);
 		}
 	}
+
 	
 	m_visible_voxels.clear();
 	m_visible_voxels.insert(m_visible_voxels.end(), visible_voxels.begin(), visible_voxels.end());
@@ -235,7 +281,6 @@ void Reconstructor::update()
 
 	vector<Point2f> m_groundCoordinates(m_visible_voxels.size());
 
-	
 	for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
 		m_groundCoordinates[i] = Point2f(m_visible_voxels[i]->x, m_visible_voxels[i]->y);
 	}
@@ -246,7 +291,51 @@ void Reconstructor::update()
 	vector<Point2f> centers;
 	kmeans(m_groundCoordinates, clusterCount, labels, TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers);
 
-	Mat frame = m_cameras[1]->getFrame();
+	// Make separate cluster vectors
+	vector<vector<Voxel*>> clusters;
+	int clusterIdx;
+	for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
+		clusterIdx = labels.at<int>(i);
+		clusters[clusterIdx].push_back(m_visible_voxels[i]);
+	}
+
+	// Filter out floating voxel clouds
+	std::vector<Voxel*> filtered_visible_voxels;
+	for (int i = 0; i < 4; i++) {
+		vector<Voxel*> cluster = clusters[i];
+		while (true) {
+			int randomIndex = rand() % cluster.size();
+			Voxel* vox_sample = cluster[randomIndex];
+			vector<Voxel*> subset = get_floodfill_subset(&cluster, vox_sample);
+			bool person = is_person(&subset);
+			if (person) {
+				voxelwise_and(&cluster, &subset, &filtered_visible_voxels);
+				break;
+			}
+		}
+	}
+
+	// Replace visible voxels with filtered vector
+	m_visible_voxels.clear();
+	m_visible_voxels.insert(m_visible_voxels.end(), filtered_visible_voxels.begin(), filtered_visible_voxels.end());
+	
+	// Re-run k-means after filtering
+	for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
+		m_groundCoordinates[i] = Point2f(m_visible_voxels[i]->x, m_visible_voxels[i]->y);
+	}
+
+	int clusterCount = 4;
+	Mat labels;
+	int attempts = 5;
+	vector<Point2f> centers;
+	kmeans(m_groundCoordinates, clusterCount, labels, TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers);
+
+	// Get frame(s) of camera(s) for voxel projection
+	vector<Mat> frames;
+	for (int c = 0; c < 4; c++) {
+		frames.push_back(m_cameras[c]->getFrame());
+	}
+	//Mat frame = m_cameras[1]->getFrame();
 	Point proj;
 	Vec3b p_color;
 
@@ -254,8 +343,10 @@ void Reconstructor::update()
 	vector<int> clusterSizes = {0,0,0,0};
 	for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
 		int clusterIdx = labels.at<int>(i);
+		//m_visible_voxels[i]->color = colorTab[clusterIdx];
 		clusterSizes[clusterIdx]++;
 	}
+	//return;
 
 	// Initialize people point Mats
 	vector<Mat> people_Points = vector<Mat>(4);
@@ -265,10 +356,15 @@ void Reconstructor::update()
 
 	// Get color matrices of visible voxels of each cluster
 	vector<int> clusterPointIndices = { 0,0,0,0 };
-
 	for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
 		int clusterIdx = labels.at<int>(i);
-		p_color = frame.at<Vec3b>(m_visible_voxels[i]->camera_projection[1]);
+
+		// Take average color of the voxel after projecting it to the 4 camera views
+		Vec3b p_color = Vec3b(0, 0, 0);
+		for (int c = 0; c < 4; c++) {
+			p_color += frames[c].at<Vec3b>(m_visible_voxels[i]->camera_projection[c]);
+		}
+		p_color /= 4.0;
 
 		people_Points[clusterIdx].at<double>(clusterPointIndices[clusterIdx], 0) = (double)p_color[0];
 		people_Points[clusterIdx].at<double>(clusterPointIndices[clusterIdx], 1) = (double)p_color[1];
@@ -278,8 +374,6 @@ void Reconstructor::update()
 	}
 
 	if (color_models.empty()) {
-		
-
 		color_models.clear();
 		
 		for (size_t clusterIdx = 0; clusterIdx < 4; clusterIdx++)
@@ -299,7 +393,6 @@ void Reconstructor::update()
 			color_models.push_back(em_model);
 		}
 	}
-
 
 	// Online classification
 	Mat sample(1, 3, CV_64FC1);
@@ -331,6 +424,11 @@ void Reconstructor::update()
 				final_label = q;
 			}
 		}
+		cout << "likelihood 1: " << avg_model_likelihoods[0] << endl;
+		cout << "likelihood 2: " << avg_model_likelihoods[1] << endl;
+		cout << "likelihood 3: " << avg_model_likelihoods[2] << endl;
+		cout << "likelihood 4: " << avg_model_likelihoods[3] << endl;
+		cout << "label: " << final_label << "\n" << endl;
 
 		clusterClassifications[clusterIndx] = final_label;
 
@@ -347,6 +445,7 @@ void Reconstructor::update()
 			}
 		}
 	}
+	//waitKey(0);
 
 	// Assign colors to each voxel based on GMM predictions
 	for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
