@@ -176,7 +176,7 @@ Mat Scene3DRenderer::applyContourFiltering(Mat input, Mat camFrame, float toplev
 
 void Scene3DRenderer::initPostProcessed(Mat input, Camera* camera) {
 	Mat camFrame = camera->getFrame();
-	input = applyContourFiltering(input, camFrame, 30.0f, 30.0f, "contours pass 1");
+	input = applyContourFiltering(input, camFrame, contour_params[0], contour_params[1], "contours pass 1");
 
 	// Execute dilation/erosion sequence according to given parameters.
 	// Positive numbers correspond to dilation, negative to erosion.
@@ -185,18 +185,30 @@ void Scene3DRenderer::initPostProcessed(Mat input, Camera* camera) {
 	Mat kernel = Mat();
 	
 	cv::imshow("Before post proc", input);
-	for (int i = 0; i < post_proc_params.size(); i++) {
-	    if (post_proc_params[i] < 0) {
-	        erode(input, input, kernel, anchor, -post_proc_params[i]);
+	for (int i = 0; i < eros_dilat_params.size(); i++) {
+		if (eros_dilat_params[i] < 0) {
+			erode(input, input, kernel, anchor, -eros_dilat_params[i]);
+		}
+		else if (eros_dilat_params[i] > 0) {
+			dilate(input, input, kernel, anchor, eros_dilat_params[i]);
 	    }
-	    else if (post_proc_params[i] > 0) {
-	        dilate(input, input, kernel, anchor, post_proc_params[i]);
-	    }
+	}
+
+	int num_white_pix = countNonZero(input);
+	if (num_white_pix == 0) {
+		camera->setForegroundImage(input);
+		return;
+	}
+	if (num_white_pix == (input.cols * input.rows)) {
+		bitwise_not(input, input);
+		camera->setForegroundImage(input);
+		return;
 	}
 
 	// Find contours
 	cv::imshow("After eros/dil, before contours", input);
-	input = applyContourFiltering(input, camFrame, 80.0f, 50.0f, "contours pass 2");
+	//cout << "contour params number: " << contour_params.size() << endl;
+	input = applyContourFiltering(input, camFrame, contour_params[2], contour_params[3], "contours pass 2");
 	
 	threshold(input, input, 20, 255, CV_THRESH_BINARY);
 	cv::imshow("AFter", input);

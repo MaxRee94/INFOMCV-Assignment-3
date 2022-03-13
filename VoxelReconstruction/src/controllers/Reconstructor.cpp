@@ -31,7 +31,7 @@ Reconstructor::Reconstructor(
 		const vector<Camera*> &cs, bool init_voxels) :
 				m_cameras(cs),
 				m_height(2048),
-				m_step(128)
+				m_step(32)
 {
 	for (size_t c = 0; c < m_cameras.size(); ++c)
 	{
