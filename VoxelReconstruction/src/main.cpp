@@ -482,7 +482,7 @@ int main(int argc, char** argv){
         else if (argv[1] == "-c"s || argv[1] == "--clustering"s) {
             VoxelReconstruction::showKeys();
             VoxelReconstruction vr(DATA_PATH, 4);
-            vr.run(argc, argv, { 5, 28, 47 }, { -1, 3 }, true, false, true);
+            vr.run(argc, argv, { 5, 15, 56 }, { 1, 0 }, { 80.0f, 30.0f, 120.0f, 80.0f }, true, false, true);
             //Mat hsv_image, hsv_image_bg;
             //cv::Mat bg = cv::imread(DATA_PATH + "cam2/" + "background.png");
 
