@@ -184,49 +184,33 @@ void Reconstructor::get_floodfill_subset(std::vector<Reconstructor::Voxel*>* clu
 	while (!subset_queue.empty()) {
 		if (subset_queue.size() % 100 == 0) {
 			cout << "queue size: " << subset_queue.size() << endl;
+			//waitKey(0);
 		}
 		int i = subset_queue.front();
 		subset_queue.pop();
 		Reconstructor::Voxel* vox = cluster->at(i);
 		subset->push_back(vox);
-		x_neighbor_range = { sample_vox->x - m_step - 1, sample_vox->x + m_step + 1 };
-		y_neighbor_range = { sample_vox->y - m_step - 1, sample_vox->y + m_step + 1 };
-		z_neighbor_range = { sample_vox->z - m_step - 1, sample_vox->z + m_step + 1 };
-		for (int j = max(i - 400, 0); j < min(i + 400, (int)cluster->size()); j++) {
+		x_neighbor_range = { (int)vox->x - m_step, (int)vox->x + m_step };
+		y_neighbor_range = { (int)vox->y - m_step, (int)vox->y + m_step };
+		z_neighbor_range = { (int)vox->z - m_step, (int)vox->z + m_step };
+		for (int j = max(i - 10000, 0); j < min(i + 10000, (int)cluster->size()); j++) {
 			if (find(included_indices->begin(), included_indices->end(), j) != included_indices->end()) continue;
 			Reconstructor::Voxel* neighbor = cluster->at(j);
-			bool x_neighbor = (x_neighbor_range[0] <= neighbor->x <= x_neighbor_range[1]);
-			bool y_neighbor = (y_neighbor_range[0] <= neighbor->y <= y_neighbor_range[1]);
-			bool z_neighbor = (z_neighbor_range[0] <= neighbor->z <= z_neighbor_range[1]);
+			int x = (int)neighbor->x;
+			int y = (int)neighbor->y;
+			int z = (int)neighbor->z;
+			bool x_neighbor = x_neighbor_range[0] <= x && x <= x_neighbor_range[1];
+			bool y_neighbor = y_neighbor_range[0] <= y && y <= y_neighbor_range[1];
+			bool z_neighbor = z_neighbor_range[0] <= z && z <= z_neighbor_range[1];
 			if (x_neighbor && y_neighbor && z_neighbor) {
+				//cout << "vox: " << vox->x << ", " << vox->y << ", " << vox->z << endl;
+				//cout << "neigh: " << neighbor->x << ", " << neighbor->y << ", " << neighbor->z << endl;
+				//cout << "range x: " << x_neighbor_range[0] << ", " << x_neighbor_range[1] << endl;
 				subset_queue.push(j);
 				included_indices->push_back(j);
 			}
 		}
 	}
-
-	//vector<int> x_neighbor_range = { sample_vox->x - m_step - 1, sample_vox->x + m_step + 1 };
-	//vector<int> y_neighbor_range = { sample_vox->y - m_step - 1, sample_vox->y + m_step + 1 };
-	//vector<int> z_neighbor_range = { sample_vox->z - m_step - 1, sample_vox->z + m_step + 1 };
-	//int neighbors_added = 0;
-	//for (int i = 0; i < cluster->size(); i++) {
-	//	if (find(included_indices->begin(), included_indices->end(), i) != included_indices->end()) continue;
-
-	//	Reconstructor::Voxel* vox = cluster->at(i);
-	//	bool x_neighbor = (x_neighbor_range[0] <= vox->x <= x_neighbor_range[1]);
-	//	bool y_neighbor = (y_neighbor_range[0] <= vox->y <= y_neighbor_range[1]);
-	//	bool z_neighbor = (z_neighbor_range[0] <= vox->z <= z_neighbor_range[1]);
-	//	if (x_neighbor && y_neighbor && z_neighbor) {
-	//		subset->push_back(vox);
-	//		included_indices->push_back(i);
-	//		//cout << "recursing.." << endl;
-	//		get_floodfill_subset(cluster, included_indices, subset, vox); // Recurse
-	//		neighbors_added++;
-	//		if (neighbors_added == 26) {
-	//			break;
-	//		}
-	//	}
-	//}
 }
 
 bool Reconstructor::is_person(std::vector<Reconstructor::Voxel*>* subset) {
@@ -321,19 +305,26 @@ void Reconstructor::update()
 		clusters[clusterIdx].push_back(m_visible_voxels[i]);
 	}
 
+	bool voxel_post_processing = true;
+
 	// Filter out floating voxel clouds
 	std::vector<Voxel*> filtered_visible_voxels;
 	vector<Voxel*> subset;
+	int remaining_voxels = 0;
 	for (int i = 0; i < 4; i++) {
+		if (!voxel_post_processing) {
+			break;
+		}
+
 		vector<Voxel*> cluster = clusters[i];
 		while (true) {
 			subset.clear();
 			int randomIndex = rand() % cluster.size();
 			Voxel* vox_sample = cluster[randomIndex];
-			subset.push_back(vox_sample);
 			vector<int> included_indices = {randomIndex};
-			cout << "getting floodfill subset.." << endl;
+			//cout << "getting floodfill subset.." << endl;
 			get_floodfill_subset(&cluster, &included_indices, &subset, vox_sample);
+			//cout << "got subset" << endl;
 
 			bool person = is_person(&subset);
 			if (person && subset.size() > 500) {
@@ -341,6 +332,7 @@ void Reconstructor::update()
 				cout << "Setting visible voxels for cluster " << i << "..." << endl;
 				for (int j = 0; j < subset.size(); j++) {
 					filtered_visible_voxels.push_back(subset[j]);
+					remaining_voxels++;
 				}
 
 				cout << "Person subset size: " << subset.size() << endl;
@@ -349,22 +341,28 @@ void Reconstructor::update()
 				break;
 			}
 		}
+		cout << "Cluster remaining voxels: " << remaining_voxels << endl;
+		cout << "Total cluster voxels: " << cluster.size() << endl;
+		remaining_voxels = 0;
 	}
 
-	// Replace visible voxels with filtered vector
-	m_visible_voxels.clear();
-	m_visible_voxels.insert(m_visible_voxels.end(), filtered_visible_voxels.begin(), filtered_visible_voxels.end());
+	if (voxel_post_processing) {
+		// Replace visible voxels with filtered vector
+		m_visible_voxels.clear();
+		m_visible_voxels.insert(m_visible_voxels.end(), filtered_visible_voxels.begin(), filtered_visible_voxels.end());
+
+		//return;
+
+		// Re-run k-means after filtering
+		for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
+			m_groundCoordinates[i] = Point2f(m_visible_voxels[i]->x, m_visible_voxels[i]->y);
+		}
+
+		centers.clear();
+		kmeans(m_groundCoordinates, clusterCount, labels, TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers);
+
+	}
 	
-	return;
-
-	// Re-run k-means after filtering
-	for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
-		m_groundCoordinates[i] = Point2f(m_visible_voxels[i]->x, m_visible_voxels[i]->y);
-	}
-
-	centers.clear();
-	kmeans(m_groundCoordinates, clusterCount, labels, TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, 10000, 0.0001), attempts, KMEANS_PP_CENTERS, centers);
-
 	// Get frame(s) of camera(s) for voxel projection
 	vector<Mat> frames;
 	for (int c = 0; c < 4; c++) {
