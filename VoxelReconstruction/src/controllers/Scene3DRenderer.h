@@ -75,6 +75,7 @@ class Scene3DRenderer
 	std::vector<cv::Vec4i> hierarchy;
 	cv::Mat tmp = cv::Mat::zeros(486, 644, CV_8UC3);
 	cv::Scalar white = cv::Scalar(rand() & 255, rand() & 255, rand() & 255);
+	cv::Scalar red = cv::Scalar(rand() & 0, rand() & 0, rand() & 255);
 	cv::Scalar black = cv::Scalar(rand() & 0, rand() & 0, rand() & 0);
 	cv::Mat result;
 	std::vector<cv::Mat> channels;
@@ -106,6 +107,8 @@ public:
 			Camera*);
 
 	void initPostProcessed(cv::Mat, Camera*);
+
+	cv::Mat applyContourFiltering(cv::Mat, cv::Mat, float, float, std::string);
 
 	bool processFrame();
 	void setCamera(

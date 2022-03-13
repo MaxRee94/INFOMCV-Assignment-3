@@ -130,12 +130,60 @@ bool Scene3DRenderer::processFrame()
 	return true;
 }
 
+Mat Scene3DRenderer::applyContourFiltering(Mat input, Mat camFrame, float toplevel_size_thresh, float embedded_size_thresh, string pass_name) {
+	findContours(input, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_NONE);
+	vector<int> large_contours;
+	vector<float> areas;
+	vector<int> removed_contours;
+	vector<int> embedded_contours;
+	cv::Scalar green = cv::Scalar(50, 255, 50);
+	cv::Scalar blue = cv::Scalar(255, 50, 50);
+	for (int i = 0; i < contours.size(); i++) {
+		float area = contourArea(contours[i]);
+		areas.push_back(area);
+		int col_offset = max(0, ((int)area - 10000) / 50);
+		col_offset = min(255, col_offset);
+		//cout << "contour area of contour " << i << " is: " << area << endl;
+		//cout << "colour offset: " << col_offset << endl;
+		cv::Scalar color = cv::Scalar(red[0] + col_offset, red[1] + col_offset, red[2]);
+		drawContours(camFrame, contours, i, color, 1, LINE_8, hierarchy, 10);
+		if (area > toplevel_size_thresh) {
+			large_contours.push_back(i);
+		}
+		if (hierarchy[i][3] != -1) {
+			embedded_contours.push_back(i);
+			continue;
+		}
+		// Remove top-level contours smaller than size threshold
+		if (area < toplevel_size_thresh) {
+			drawContours(camFrame, contours, i, green, FILLED, 8, hierarchy);
+			drawContours(input, contours, i, black, FILLED, 8, hierarchy);
+			removed_contours.push_back(i);
+		}
+	}
+	for (int i = 0; i < embedded_contours.size(); i++) {
+		int c = embedded_contours[i];
+		int parent = hierarchy[c][3];
+		bool parent_was_removed = find(removed_contours.begin(), removed_contours.end(), parent) != removed_contours.end();
+		if (areas[c] < embedded_size_thresh && !parent_was_removed) {
+			drawContours(camFrame, contours, c, blue, FILLED, 8, hierarchy);
+			drawContours(input, contours, c, white, FILLED, 8, hierarchy);
+		}
+	}
+	cv::imshow(pass_name, camFrame);
+	return input;
+}
+
 void Scene3DRenderer::initPostProcessed(Mat input, Camera* camera) {
+	Mat camFrame = camera->getFrame();
+	input = applyContourFiltering(input, camFrame, 30.0f, 30.0f, "contours pass 1");
+
 	// Execute dilation/erosion sequence according to given parameters.
 	// Positive numbers correspond to dilation, negative to erosion.
 	// Zero values mean that neither dilation nor erosion is applied.
 	Point anchor = Point(-1, -1);
 	Mat kernel = Mat();
+	
 	cv::imshow("Before post proc", input);
 	for (int i = 0; i < post_proc_params.size(); i++) {
 	    if (post_proc_params[i] < 0) {
@@ -147,28 +195,13 @@ void Scene3DRenderer::initPostProcessed(Mat input, Camera* camera) {
 	}
 
 	// Find contours
-	//int size = 1;
-	//cv::imshow("After eros/dil, before contours", input);
-	//cv::Size size_element = cv::Size(2 * size + 1, 2 * size + 1);
-	//findContours(input, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_NONE);
-	////morphologyEx(input, input, MORPH_OPEN, kernel);
-	//int cont_size_thresh = 50;
-	//int largest = 0;
-	//int largest_idx;
-	//for (int i = 0; i < contours.size(); i++) {
-	//	if (contourArea(contours[i]) > largest) {
-	//		largest_idx = i;
-	//		largest = contourArea(contours[i]);
-	//	}
-	//}
-	//for (int i = 0; i < contours.size(); i++) {
-	//	if (contourArea(contours[i]) < cont_size_thresh && i != largest_idx) {
-	//		drawContours(input, contours, hierarchy[i][1], white, FILLED, 8, hierarchy);
-	//	}
-	//}
+	cv::imshow("After eros/dil, before contours", input);
+	input = applyContourFiltering(input, camFrame, 80.0f, 50.0f, "contours pass 2");
 	
 	threshold(input, input, 20, 255, CV_THRESH_BINARY);
 	cv::imshow("AFter", input);
+	
+	//waitKey(0);
 
 	camera->setForegroundImage(input);
 }
