@@ -178,6 +178,7 @@ void Reconstructor::get_floodfill_subset(std::vector<Reconstructor::Voxel*>* clu
 	vector<int> x_neighbor_range = { sample_vox->x - m_step - 1, sample_vox->x + m_step + 1 };
 	vector<int> y_neighbor_range = { sample_vox->y - m_step - 1, sample_vox->y + m_step + 1 };
 	vector<int> z_neighbor_range = { sample_vox->z - m_step - 1, sample_vox->z + m_step + 1 };
+	int neighbors_added = 0;
 	for (int i = 0; i < cluster->size(); i++) {
 		if (find(included_indices->begin(), included_indices->end(), i) != included_indices->end()) continue;
 
@@ -188,8 +189,12 @@ void Reconstructor::get_floodfill_subset(std::vector<Reconstructor::Voxel*>* clu
 		if (x_neighbor && y_neighbor && z_neighbor) {
 			subset->push_back(vox);
 			included_indices->push_back(i);
+			//cout << "recursing.." << endl;
 			get_floodfill_subset(cluster, included_indices, subset, vox); // Recurse
-			break;
+			neighbors_added++;
+			if (neighbors_added == 26) {
+				break;
+			}
 		}
 	}
 }
@@ -297,14 +302,18 @@ void Reconstructor::update()
 			Voxel* vox_sample = cluster[randomIndex];
 			subset.push_back(vox_sample);
 			vector<int> included_indices = {randomIndex};
+			cout << "getting floodfill subset.." << endl;
 			get_floodfill_subset(&cluster, &included_indices, &subset, vox_sample);
+
 			bool person = is_person(&subset);
-			if (person) {
+			if (person && subset.size() > 500) {
 				// Add all voxels from the subset to the visible voxels vector.
 				cout << "Setting visible voxels for cluster " << i << "..." << endl;
 				for (int j = 0; j < subset.size(); j++) {
 					filtered_visible_voxels.push_back(subset[j]);
 				}
+
+				cout << "Person subset size: " << subset.size() << endl;
 
 				// All remaining voxels in the cluster can be ignored
 				break;
@@ -316,6 +325,8 @@ void Reconstructor::update()
 	m_visible_voxels.clear();
 	m_visible_voxels.insert(m_visible_voxels.end(), filtered_visible_voxels.begin(), filtered_visible_voxels.end());
 	
+	return;
+
 	// Re-run k-means after filtering
 	for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
 		m_groundCoordinates[i] = Point2f(m_visible_voxels[i]->x, m_visible_voxels[i]->y);
