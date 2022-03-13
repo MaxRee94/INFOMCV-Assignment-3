@@ -12,6 +12,7 @@
 #include <opencv2/core/types_c.h>
 #include <opencv2/opencv.hpp>
 #include <cassert>
+#include <queue>
 #include <iostream>
 #include<conio.h>
 #include<math.h>
@@ -175,28 +176,57 @@ double distanceCalculate(double x1, double y1, double x2, double y2)
 }
 
 void Reconstructor::get_floodfill_subset(std::vector<Reconstructor::Voxel*>* cluster, vector<int>* included_indices, std::vector<Reconstructor::Voxel*>* subset, Reconstructor::Voxel* sample_vox) {
-	vector<int> x_neighbor_range = { sample_vox->x - m_step - 1, sample_vox->x + m_step + 1 };
-	vector<int> y_neighbor_range = { sample_vox->y - m_step - 1, sample_vox->y + m_step + 1 };
-	vector<int> z_neighbor_range = { sample_vox->z - m_step - 1, sample_vox->z + m_step + 1 };
-	int neighbors_added = 0;
-	for (int i = 0; i < cluster->size(); i++) {
-		if (find(included_indices->begin(), included_indices->end(), i) != included_indices->end()) continue;
-
+	queue<int> subset_queue;
+	vector<int> x_neighbor_range;
+	vector<int> y_neighbor_range;
+	vector<int> z_neighbor_range;
+	subset_queue.push(included_indices->at(0));
+	while (!subset_queue.empty()) {
+		if (subset_queue.size() % 100 == 0) {
+			cout << "queue size: " << subset_queue.size() << endl;
+		}
+		int i = subset_queue.front();
+		subset_queue.pop();
 		Reconstructor::Voxel* vox = cluster->at(i);
-		bool x_neighbor = (x_neighbor_range[0] <= vox->x <= x_neighbor_range[1]);
-		bool y_neighbor = (y_neighbor_range[0] <= vox->y <= y_neighbor_range[1]);
-		bool z_neighbor = (z_neighbor_range[0] <= vox->z <= z_neighbor_range[1]);
-		if (x_neighbor && y_neighbor && z_neighbor) {
-			subset->push_back(vox);
-			included_indices->push_back(i);
-			//cout << "recursing.." << endl;
-			get_floodfill_subset(cluster, included_indices, subset, vox); // Recurse
-			neighbors_added++;
-			if (neighbors_added == 26) {
-				break;
+		subset->push_back(vox);
+		x_neighbor_range = { sample_vox->x - m_step - 1, sample_vox->x + m_step + 1 };
+		y_neighbor_range = { sample_vox->y - m_step - 1, sample_vox->y + m_step + 1 };
+		z_neighbor_range = { sample_vox->z - m_step - 1, sample_vox->z + m_step + 1 };
+		for (int j = max(i - 400, 0); j < min(i + 400, (int)cluster->size()); j++) {
+			if (find(included_indices->begin(), included_indices->end(), j) != included_indices->end()) continue;
+			Reconstructor::Voxel* neighbor = cluster->at(j);
+			bool x_neighbor = (x_neighbor_range[0] <= neighbor->x <= x_neighbor_range[1]);
+			bool y_neighbor = (y_neighbor_range[0] <= neighbor->y <= y_neighbor_range[1]);
+			bool z_neighbor = (z_neighbor_range[0] <= neighbor->z <= z_neighbor_range[1]);
+			if (x_neighbor && y_neighbor && z_neighbor) {
+				subset_queue.push(j);
+				included_indices->push_back(j);
 			}
 		}
 	}
+
+	//vector<int> x_neighbor_range = { sample_vox->x - m_step - 1, sample_vox->x + m_step + 1 };
+	//vector<int> y_neighbor_range = { sample_vox->y - m_step - 1, sample_vox->y + m_step + 1 };
+	//vector<int> z_neighbor_range = { sample_vox->z - m_step - 1, sample_vox->z + m_step + 1 };
+	//int neighbors_added = 0;
+	//for (int i = 0; i < cluster->size(); i++) {
+	//	if (find(included_indices->begin(), included_indices->end(), i) != included_indices->end()) continue;
+
+	//	Reconstructor::Voxel* vox = cluster->at(i);
+	//	bool x_neighbor = (x_neighbor_range[0] <= vox->x <= x_neighbor_range[1]);
+	//	bool y_neighbor = (y_neighbor_range[0] <= vox->y <= y_neighbor_range[1]);
+	//	bool z_neighbor = (z_neighbor_range[0] <= vox->z <= z_neighbor_range[1]);
+	//	if (x_neighbor && y_neighbor && z_neighbor) {
+	//		subset->push_back(vox);
+	//		included_indices->push_back(i);
+	//		//cout << "recursing.." << endl;
+	//		get_floodfill_subset(cluster, included_indices, subset, vox); // Recurse
+	//		neighbors_added++;
+	//		if (neighbors_added == 26) {
+	//			break;
+	//		}
+	//	}
+	//}
 }
 
 bool Reconstructor::is_person(std::vector<Reconstructor::Voxel*>* subset) {
