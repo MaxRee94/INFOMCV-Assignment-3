@@ -32,8 +32,7 @@ public:
 	static void showKeys();
 
 	Scene3DRenderer run(
-		int, char**, std::vector<int> optimal_hsv_values, std::vector<int> post_proc_params,
-		bool = true, bool = true, bool = true
+		int, char**, std::vector<int> optimal_hsv_values, std::vector<int> eros_dil_params, std::vector<float> contour_params, bool = true, bool = true, bool = true
 	);
 };
 

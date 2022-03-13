@@ -255,26 +255,29 @@ vector<vector<vector<int>>> get_manual_voxelmodels(
     return all_voxel_models;
 }
 
-vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRenderer* scene3d) {
+vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRenderer* scene3d, vector<float>* contour_optima) {
     // Hyperparameters
     int iteration_threshold = 35;
     float convergence_velocity = 1.15f;
     float stdev_multiplier = 2.0f;
     float stdev_multiplier_minimum = 0.005f;
     vector<int> post_iteration_range = { -5, 5 };
-    double noise_penalty = 0.5;
+    vector<float> contour_scale_range = { 0.0, 200.0 };
+    double noise_penalty = 0.8;
 
     // Initial values
-    vector<int> hsv_optima = { 0, 0, 0}; // Start with mean values (255/2)
-    vector<int> post_optima = { 0, 0 }; // Start with mean values (neither dilation nor erosion)
+    vector<int> hsv_optima = { 5, 28, 47 }; 
+    vector<int> eros_dil_optima = { 1, 0 }; 
     int dt_since_update = 0;
     double total_pix = static_cast<double>(img_size[0] * img_size[1]);
     double best_fitness = 0.0;
     vector<int> hsv_sample;
-    vector<int> post_sample;
+    vector<int> eros_dil_sample;
+    vector<float> contour_sample;
     default_random_engine gen;
     int hsv_element;
-    int post_element;
+    int eros_dil_element;
+    float contour_element;
     double fitness;
     int j = 0;
     vector<int> frame_indices = { 300, 1200 };
@@ -303,35 +306,51 @@ vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRende
             hsv_sample.push_back(hsv_element);
         }
 
-        // Sample space of possible combinations of post-processing steps
-        post_sample.clear();
-        for (int i = 0; i < post_optima.size(); i++) {
-            normal_distribution<float> distr(post_optima[i], stdev_multiplier * post_iteration_range[1]);
-            post_element = distr(gen);
+        // Sample space of possible combinations of erosion/dilation steps
+        eros_dil_sample.clear();
+        for (int i = 0; i < eros_dil_optima.size(); i++) {
+            normal_distribution<float> distr(eros_dil_optima[i], stdev_multiplier * post_iteration_range[1]);
+            eros_dil_element = distr(gen);
 
             // Clamp values to post_iteration_range
-            if (post_element < post_iteration_range[0]) {
-                post_element = post_iteration_range[0];
+            if (eros_dil_element < post_iteration_range[0]) {
+                eros_dil_element = post_iteration_range[0];
             }
-            if (post_element > post_iteration_range[1]) {
-                post_element = post_iteration_range[1];
+            if (eros_dil_element > post_iteration_range[1]) {
+                eros_dil_element = post_iteration_range[1];
             }
-            post_sample.push_back(post_element);
+            eros_dil_sample.push_back(eros_dil_element);
+        }
+
+        // Sample space of possible contour application settings
+        contour_sample.clear();
+        for (int i = 0; i < contour_optima->size(); i++) {
+            normal_distribution<float> distr(contour_optima->at(i), stdev_multiplier / 10.0 * contour_scale_range[1]);
+            contour_element = distr(gen);
+
+            // Clamp values to post_iteration_range
+            if (contour_element < contour_scale_range[0]) {
+                contour_element = contour_scale_range[0];
+            }
+            if (contour_element > contour_scale_range[1]) {
+                contour_element = contour_scale_range[1];
+            }
+            contour_sample.push_back(contour_element);
         }
 
         // Set HSV values and post proc params on Scene3dRenderer
-        //hsv_sample = { 0, 67, 63 }; // TEMP!!
         scene3d->setHThreshold(hsv_sample[0]);
         scene3d->setSThreshold(hsv_sample[1]);
         scene3d->setVThreshold(hsv_sample[2]);
-        scene3d->setPostProcParams(post_sample);
+        scene3d->setErDilParams(eros_dil_sample);
+        scene3d->setContourParams(contour_sample);
 
         // Test segmentation fitness values for all cameras and frames
         fitness = 0.0;
         for (int j = 0; j < 2; j++) {
             for (int c = 0; c < m_cam_views.size(); c++) {
                 update_cam_foreground(
-                    hsv_sample, m_cam_views, c, scene3d, total_pix, manual_masks, post_sample, frame_indices.at(j)
+                    hsv_sample, m_cam_views, c, scene3d, total_pix, manual_masks, eros_dil_sample, frame_indices.at(j)
                 );
             }
             fitness += assess_foregrounds(
@@ -344,15 +363,22 @@ vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRende
         if (fitness > best_fitness) {
             best_fitness = fitness;
             hsv_optima = hsv_sample;
-            post_optima = post_sample;
+            eros_dil_optima = eros_dil_sample;
+            (*contour_optima)[0] = contour_sample[0];
+            (*contour_optima)[1] = contour_sample[1];
+            (*contour_optima)[2] = contour_sample[2];
+            (*contour_optima)[3] = contour_sample[3];
             dt_since_update = 0;
         }
         else {
             dt_since_update++;
         }
 
-        if (j % 2 == 0) {
-            cout << "  iteration: " << j << ". stdev_multiplier: " << stdev_multiplier << "best fitness: " << best_fitness << ".\n";
+        if (j % 3 == 0) {
+            cout << "  iteration: " << j << ". stdev_multiplier: " << stdev_multiplier << " Current best fitness: " << best_fitness << ".\n";
+            cout << "Current hsv optima: H " << hsv_optima[0] << " S " << hsv_optima[1] << " V " << hsv_optima[2] << endl;
+            cout << "Current erosion/dilation optima: " << eros_dil_optima[0] << ", " << eros_dil_optima[1] << endl;
+            cout << "Current contours optima: " << contour_optima->at(0) << ", " << contour_optima->at(1) << ", " << contour_optima->at(2) << ", " << contour_optima->at(3) << endl;
         }
 
         // Decrease standard deviation to favor samples close to current optima
@@ -367,22 +393,12 @@ vector<vector<int>> get_bg_segm_params(vector<Camera*> m_cam_views, Scene3DRende
         j++;
     }
 
-    cout << "Best fitness: " << best_fitness << " after " << j << " iterations." << endl;
+    cout << "Final fitness: " << best_fitness << " after " << j << " iterations." << endl;
     cout << "Found hsv optima: H " << hsv_optima[0] << " S " << hsv_optima[1] << " V " << hsv_optima[2] << endl;
-    cout << "Found post-processing optima: " << post_optima[0] << ", " << post_optima[1];
-    cout << "\nInfo about found optima:" << endl;
+    cout << "Found erosion/dilation optima: " << eros_dil_optima[0] << ", " << eros_dil_optima[1];
+    cout << "Found contours optima: " << contour_optima->at(0) << ", " << contour_optima->at(1) << ", " << contour_optima->at(2) << ", " << contour_optima->at(3) << endl;
     
-    //for (int c = 0; c < m_cam_views.size(); c++) {
-    //    update_cam_foreground(
-    //        hsv_optima, m_cam_views, c, scene3d, total_pix, manual_masks, post_optima, j
-    //    );
-    //}
-    //assess_foregrounds(
-    //    &manual_visible_voxels, &reconstructor, &all_voxels, noise_penalty);
-
-    //waitKey();
-
-    return { hsv_optima, post_optima };
+    return { hsv_optima, eros_dil_optima };
 }
 
 string type2str(int type) {
@@ -456,12 +472,12 @@ int main(int argc, char** argv){
         else if (argv[1] == "-m"s || argv[1] == "--manual"s) {
             VoxelReconstruction::showKeys();
             VoxelReconstruction vr(DATA_PATH, 4);
-            vr.run(argc, argv, {0, 0, 0}, {0, 0});
+            vr.run(argc, argv, {0, 0, 0}, {0, 0}, { 30.0f, 30.0f, 80.0f, 50.0f });
         }
         else if (argv[1] == "-skip"s || argv[1] == "--skip_tuning"s) {
             VoxelReconstruction::showKeys();
             VoxelReconstruction vr(DATA_PATH, 4);
-            vr.run(argc, argv, { 5, 28, 47 }, { -1, 3 }, true, false, true);
+            vr.run(argc, argv, { 5, 15, 56 }, { 1, 0 }, { 80.0f, 30.0f, 120.0f, 80.0f }, true, false, true);
         }
         else if (argv[1] == "-c"s || argv[1] == "--clustering"s) {
             VoxelReconstruction::showKeys();
@@ -538,10 +554,11 @@ int main(int argc, char** argv){
 
         // Tune background segmentation parameters
         vector<Camera*> m_cam_views = vr.get_cam_views();
-        Scene3DRenderer scene3d = vr.run(argc, argv, { 0, 0, 0 }, { 0, 0 }, false, false, false);
-        vector<vector<int>> bg_segm_params = get_bg_segm_params(m_cam_views, &scene3d);
+        Scene3DRenderer scene3d = vr.run(argc, argv, { 0, 0, 0 }, { 0, 0 }, { 0.0f, 0.0f, 0.0f, 0.0f }, false, false, false);
+        vector<float> contour_optima = { 50.0f, 30.0f, 80.0f, 80.0f };
+        vector<vector<int>> bg_segm_params = get_bg_segm_params(m_cam_views, &scene3d, &contour_optima);
 
-        vr.run(argc, argv, bg_segm_params[0], bg_segm_params[1], true, false, true);
+        vr.run(argc, argv, bg_segm_params[0], bg_segm_params[1], contour_optima, true, false, true);
     }
 
 	return EXIT_SUCCESS;

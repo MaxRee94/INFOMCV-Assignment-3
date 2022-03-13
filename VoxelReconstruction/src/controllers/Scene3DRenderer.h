@@ -70,11 +70,13 @@ class Scene3DRenderer
 	int m_v_threshold;                        // Value threshold number for background subtraction
 	int m_pv_threshold;                       // Value threshold value at previous iteration (update awareness)
 
-	std::vector<int> post_proc_params;		  // Post-processing parameters
+	std::vector<int> eros_dilat_params;		  // Eros/dilation parameters
+	std::vector<float> contour_params;		  // Contour size threshold parameters
 	std::vector<std::vector<cv::Point>> contours;
 	std::vector<cv::Vec4i> hierarchy;
 	cv::Mat tmp = cv::Mat::zeros(486, 644, CV_8UC3);
 	cv::Scalar white = cv::Scalar(rand() & 255, rand() & 255, rand() & 255);
+	cv::Scalar red = cv::Scalar(rand() & 0, rand() & 0, rand() & 255);
 	cv::Scalar black = cv::Scalar(rand() & 0, rand() & 0, rand() & 0);
 	cv::Mat result;
 	std::vector<cv::Mat> channels;
@@ -106,6 +108,8 @@ public:
 			Camera*);
 
 	void initPostProcessed(cv::Mat, Camera*);
+
+	cv::Mat applyContourFiltering(cv::Mat, cv::Mat, float, float, std::string);
 
 	bool processFrame();
 	void setCamera(
@@ -411,10 +415,16 @@ public:
 		m_h_threshold = threshold;
 	}
 
-	void setPostProcParams(
+	void setErDilParams(
 		std::vector<int> params
 	) {
-		post_proc_params = params;
+		eros_dilat_params = params;
+	}
+
+	void setContourParams(
+		std::vector<float> params
+	) {
+		contour_params = params;
 	}
 
 	void setSThreshold(
