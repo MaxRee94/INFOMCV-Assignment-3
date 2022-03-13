@@ -32,9 +32,15 @@ namespace nl_uu_science_gmt
 Reconstructor::Reconstructor(
 		const vector<Camera*> &cs, bool init_voxels) :
 				m_cameras(cs),
-				m_height(4096),
+				m_height(2048),
 				m_step(32)
 {
+	vector<Point2f> temp = vector<Point2f>(NULL);
+	for (size_t i = 0; i < 4; i++)
+	{
+		center_coordinates.push_back(temp);
+	}
+
 	for (size_t c = 0; c < m_cameras.size(); ++c)
 	{
 		if (m_plane_size.area() > 0)
@@ -348,6 +354,7 @@ void Reconstructor::update()
 				clusterLabels.push_back(label);
 			}
 		}
+
 		//avg_likelihood /= (4 * people_Points[clusterIndx].rows);
 		//cout << "average likelihood: " << avg_likelihood << endl;
 		//cout << "abs best likelihood: " << abs_best_likelihood << endl;
@@ -361,8 +368,12 @@ void Reconstructor::update()
 				highest_count = labelCount;
 				final_label = l;
 			}
+
 		}
 		clusterClassifications[clusterIndx] = final_label;
+
+		// Add vertices into main center vector
+		center_coordinates[final_label].push_back(centers[final_label]);
 	}
 
 	// Assign colors to each voxel based on GMM predictions
