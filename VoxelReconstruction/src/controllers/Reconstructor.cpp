@@ -277,13 +277,9 @@ void Reconstructor::update()
 		clusterPointIndices[clusterIdx]++;
 	}
 
-	for (size_t i = 0; i < m_cameras.size(); i++)
-	{
-		int j = m_cameras[i]->getVideoFrameIndex();
-		cout << "Camera " << i << " frame " << j << endl;
-	}
+	if (color_models.empty()) {
+		
 
-	if (m_cameras[1]->getVideoFrameIndex() == 1 || m_cameras[1]->getVideoFrameIndex() == 2) {
 		color_models.clear();
 		
 		for (size_t clusterIdx = 0; clusterIdx < 4; clusterIdx++)
@@ -373,7 +369,17 @@ void Reconstructor::update()
 		clusterClassifications[clusterIndx] = final_label;
 
 		// Add vertices into main center vector
-		center_coordinates[final_label].push_back(centers[final_label]);
+		center_coordinates[final_label].push_back(centers[clusterIndx]);
+
+		if (m_cameras[0]->getVideoFrameIndex() == 50) {
+			for (size_t i = 0; i < 4; i++)
+			{
+				for (size_t j = 0; j < center_coordinates[i].size(); j++)
+				{
+					cout << center_coordinates[i][j] << endl;
+				}
+			}
+		}
 	}
 
 	// Assign colors to each voxel based on GMM predictions

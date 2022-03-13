@@ -555,10 +555,6 @@ void Glut::display()
 
 	drawVoxels();
 
-	if (scene3d.getCurrentFrame() <= 5 && scene3d.getCurrentFrame() >= 0) {
-		scene3d.setPaused(true);
-	}
-
 	if (scene3d.isShowOrg())
 		drawWCoord();
 	if (scene3d.isShowInfo())
