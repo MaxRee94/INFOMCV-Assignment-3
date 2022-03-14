@@ -44,6 +44,8 @@ private:
 	size_t m_voxels_amount;                 // Voxel count
 	cv::Size m_plane_size;                  // Camera FoV plane WxH
 
+	float m_height_thresh = 0.05;			// Height threshold (fraction of m_height) for determining whether a voxel cloud is a person
+
 	std::vector<Voxel*> m_voxels;           // Pointer vector to all voxels in the half-space
 	std::vector<Voxel*> m_visible_voxels;   // Pointer vector to all visible voxels
 	std::vector<Voxel*> prev_visible_voxels; // Pointer vector to all voxels of previous frame
@@ -86,7 +88,7 @@ public:
 		return voxel_coords;
 	}
 
-	void get_floodfill_subset(std::vector<Voxel*>*, std::vector<int>* included_indices, std::vector<Voxel*>*, Voxel*);
+	void get_floodfill_subset(std::vector<Voxel*>*, std::vector<int>* included_indices, std::vector<Voxel*>*);
 
 	bool is_person(std::vector<Voxel*>* subset);
 

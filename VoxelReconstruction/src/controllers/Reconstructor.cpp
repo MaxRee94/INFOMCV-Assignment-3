@@ -175,8 +175,9 @@ double distanceCalculate(double x1, double y1, double x2, double y2)
 	return dist;
 }
 
-void Reconstructor::get_floodfill_subset(std::vector<Reconstructor::Voxel*>* cluster, vector<int>* included_indices, std::vector<Reconstructor::Voxel*>* subset, Reconstructor::Voxel* sample_vox) {
+void Reconstructor::get_floodfill_subset(std::vector<Reconstructor::Voxel*>* cluster, vector<int>* included_indices, std::vector<Reconstructor::Voxel*>* subset) {
 	queue<int> subset_queue;
+	vector<int> neighbors;
 	vector<int> x_neighbor_range;
 	vector<int> y_neighbor_range;
 	vector<int> z_neighbor_range;
@@ -192,14 +193,27 @@ void Reconstructor::get_floodfill_subset(std::vector<Reconstructor::Voxel*>* clu
 		//}
 		i = subset_queue.front();
 		subset_queue.pop();
+		if (i > cluster->size()) {
+			cout << "i: " << i << " and cluster size: " << cluster->size() << endl;
+		}
 		vox = cluster->at(i);
 		subset->push_back(vox);
 		x_neighbor_range = { vox->x - m_step, vox->x + m_step };
 		y_neighbor_range = { vox->y - m_step, vox->y + m_step };
 		z_neighbor_range = { vox->z - m_step, vox->z + m_step };
-		for (int j = max(i - 12000, 0); j < min(i + 12000, (int)cluster->size()); j++) {
-			if (find(included_indices->begin(), included_indices->end(), j) != included_indices->end()) continue;
-			neighbor = cluster->at(j);
+		
+		
+
+		// Get neighbors
+		int j_min = max(i - 12000, 0);
+		int max_j = min(i + 12000, (int)cluster->size());
+		int j;
+		neighbors.clear();
+		vector<Voxel*> clust = *cluster;
+#pragma omp parallel for schedule(guided) private(neighbor, x, y, z, x_neighbor, y_neighbor, z_neighbor) shared(neighbors, cluster)
+		for (j = j_min; j < max_j; j++) {
+			//neighbor = cluster->at(j);
+			neighbor = clust.at(j);
 			x = neighbor->x;
 			y = neighbor->y;
 			z = neighbor->z;
@@ -210,16 +224,23 @@ void Reconstructor::get_floodfill_subset(std::vector<Reconstructor::Voxel*>* clu
 				//cout << "vox: " << vox->x << ", " << vox->y << ", " << vox->z << endl;
 				//cout << "neigh: " << neighbor->x << ", " << neighbor->y << ", " << neighbor->z << endl;
 				//cout << "range x: " << x_neighbor_range[0] << ", " << x_neighbor_range[1] << endl;
-				subset_queue.push(j);
-				included_indices->push_back(j);
+//#pragma omp critical //push_back is critical
+				neighbors.push_back(j);
 			}
+		}
+		
+		// Add neighbors to queue and included indices
+		for (int j = 0; j < neighbors.size(); j++) {
+			if (find(included_indices->begin(), included_indices->end(), j) != included_indices->end()) continue;
+			subset_queue.push(j);
+			included_indices->push_back(j);
 		}
 	}
 }
 
 bool Reconstructor::is_person(std::vector<Reconstructor::Voxel*>* subset) {
 	bool is_person = false;
-	float height_thresh = 0.05 * m_height;
+	float height_thresh = m_height_thresh * m_height;
 	for (int i = 0; i < subset->size(); i++) {
 		if (subset->at(i)->z < height_thresh) {
 			is_person = true;
@@ -313,8 +334,11 @@ void Reconstructor::update()
 
 	// Filter out floating voxel clouds
 	std::vector<Voxel*> filtered_visible_voxels;
+	int sampleIndex;
 	vector<Voxel*> subset;
+	Voxel* vox_sample;
 	int remaining_voxels = 0;
+	float height_thresh = m_height_thresh * m_height;
 	for (int i = 0; i < 4; i++) {
 		if (!voxel_post_processing) {
 			break;
@@ -323,15 +347,22 @@ void Reconstructor::update()
 		vector<Voxel*> cluster = clusters[i];
 		while (true) {
 			subset.clear();
-			int randomIndex = rand() % cluster.size();
-			Voxel* vox_sample = cluster[randomIndex];
-			vector<int> included_indices = {randomIndex};
-			//cout << "getting floodfill subset.." << endl;
-			get_floodfill_subset(&cluster, &included_indices, &subset, vox_sample);
-			//cout << "got subset" << endl;
+			
+			// Select voxel from bottom portion of voxel space in order to ensure it is part of the 'person' subset
+			while (true) {
+				sampleIndex = rand() % cluster.size();
+				vox_sample = cluster[sampleIndex];
+				if (vox_sample->z < height_thresh) {
+					break;
+				}
+			}
 
-			bool person = is_person(&subset);
-			if (person && subset.size() > 500) {
+			// Get 'person'-subset of the cluster using flood fill algorithm
+			vector<int> included_indices = {sampleIndex};
+			get_floodfill_subset(&cluster, &included_indices, &subset);
+
+			//bool person = is_person(&subset);
+			if (subset.size() > 500) {
 				// Add all voxels from the subset to the visible voxels vector.
 				cout << "Setting visible voxels for cluster " << i << "..." << endl;
 				for (int j = 0; j < subset.size(); j++) {
