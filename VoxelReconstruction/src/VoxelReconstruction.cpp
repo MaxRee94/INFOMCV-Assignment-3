@@ -129,7 +129,7 @@ namespace nl_uu_science_gmt
 		Scene3DRenderer scene3d(reconstructor, m_cam_views, optimal_hsv_values, manual_hsv);
 		scene3d.setErDilParams(eros_dil_params);
 		scene3d.setContourParams(contour_params);
-		scene3d.setPaused(true);
+		//scene3d.setPaused(true);
 
 		if (show_glut) {
 			Glut glut(scene3d);

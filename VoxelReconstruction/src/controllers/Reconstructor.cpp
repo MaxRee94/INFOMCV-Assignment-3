@@ -180,28 +180,32 @@ void Reconstructor::get_floodfill_subset(std::vector<Reconstructor::Voxel*>* clu
 	vector<int> x_neighbor_range;
 	vector<int> y_neighbor_range;
 	vector<int> z_neighbor_range;
+	Reconstructor::Voxel* vox;
+	Reconstructor::Voxel* neighbor;
+	int x, y, z, i;
+	bool x_neighbor, y_neighbor, z_neighbor;
 	subset_queue.push(included_indices->at(0));
 	while (!subset_queue.empty()) {
-		if (subset_queue.size() % 100 == 0) {
-			cout << "queue size: " << subset_queue.size() << endl;
-			//waitKey(0);
-		}
-		int i = subset_queue.front();
+		//if (subset_queue.size() % 200 == 0) {
+		//	cout << "queue size: " << subset_queue.size() << endl;
+		//	//waitKey(0);
+		//}
+		i = subset_queue.front();
 		subset_queue.pop();
-		Reconstructor::Voxel* vox = cluster->at(i);
+		vox = cluster->at(i);
 		subset->push_back(vox);
-		x_neighbor_range = { (int)vox->x - m_step, (int)vox->x + m_step };
-		y_neighbor_range = { (int)vox->y - m_step, (int)vox->y + m_step };
-		z_neighbor_range = { (int)vox->z - m_step, (int)vox->z + m_step };
-		for (int j = max(i - 10000, 0); j < min(i + 10000, (int)cluster->size()); j++) {
+		x_neighbor_range = { vox->x - m_step, vox->x + m_step };
+		y_neighbor_range = { vox->y - m_step, vox->y + m_step };
+		z_neighbor_range = { vox->z - m_step, vox->z + m_step };
+		for (int j = max(i - 12000, 0); j < min(i + 12000, (int)cluster->size()); j++) {
 			if (find(included_indices->begin(), included_indices->end(), j) != included_indices->end()) continue;
-			Reconstructor::Voxel* neighbor = cluster->at(j);
-			int x = (int)neighbor->x;
-			int y = (int)neighbor->y;
-			int z = (int)neighbor->z;
-			bool x_neighbor = x_neighbor_range[0] <= x && x <= x_neighbor_range[1];
-			bool y_neighbor = y_neighbor_range[0] <= y && y <= y_neighbor_range[1];
-			bool z_neighbor = z_neighbor_range[0] <= z && z <= z_neighbor_range[1];
+			neighbor = cluster->at(j);
+			x = neighbor->x;
+			y = neighbor->y;
+			z = neighbor->z;
+			x_neighbor = x_neighbor_range[0] <= x && x <= x_neighbor_range[1];
+			y_neighbor = y_neighbor_range[0] <= y && y <= y_neighbor_range[1];
+			z_neighbor = z_neighbor_range[0] <= z && z <= z_neighbor_range[1];
 			if (x_neighbor && y_neighbor && z_neighbor) {
 				//cout << "vox: " << vox->x << ", " << vox->y << ", " << vox->z << endl;
 				//cout << "neigh: " << neighbor->x << ", " << neighbor->y << ", " << neighbor->z << endl;

@@ -483,8 +483,8 @@ int main(int argc, char** argv){
             VoxelReconstruction::showKeys();
             VoxelReconstruction vr(DATA_PATH, 4);
             //vr.run(argc, argv, { 5, 15, 69 }, { 1, 0 }, { 80.0f, 30.0f, 120.0f, 80.0f }, true, false, true); // optimal segm
-            vr.run(argc, argv, { 5, 18, 47 }, { -1, 3 }, { 0.0f, 0.0f, 120.0f, 0.0f }, true, false, true); // debug
-            //vr.run(argc, argv, { 5, 28, 47 }, { -1, 3 }, { 0.0f, 0.0f, 0.0f, 0.0f }, true, false, true); // original 
+            //vr.run(argc, argv, { 5, 18, 47 }, { -1, 3 }, { 0.0f, 0.0f, 120.0f, 0.0f }, true, false, true); // debug
+            vr.run(argc, argv, { 5, 28, 47 }, { -1, 3 }, { 0.0f, 0.0f, 0.0f, 0.0f }, true, false, true); // original 
         }
 	}
     else {
