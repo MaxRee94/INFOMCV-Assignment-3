@@ -25,6 +25,9 @@ public:
 	 * Voxel structure
 	 * Represents a 3D pixel in the half space
 	 */
+
+	bool voxel_post_processing;
+
 	struct Voxel
 	{
 		int x, y, z;                               // Coordinates
@@ -40,6 +43,7 @@ private:
 	const int m_step;                       // Step size (space between voxels)
 
 	std::vector<cv::Point3f*> m_corners;    // Cube half-space corner locations
+
 
 	size_t m_voxels_amount;                 // Voxel count
 	cv::Size m_plane_size;                  // Camera FoV plane WxH

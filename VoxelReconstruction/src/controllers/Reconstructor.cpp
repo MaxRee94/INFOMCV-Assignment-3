@@ -201,19 +201,14 @@ void Reconstructor::get_floodfill_subset(std::vector<Reconstructor::Voxel*>* clu
 		x_neighbor_range = { vox->x - m_step, vox->x + m_step };
 		y_neighbor_range = { vox->y - m_step, vox->y + m_step };
 		z_neighbor_range = { vox->z - m_step, vox->z + m_step };
-		
-		
 
 		// Get neighbors
 		int j_min = max(i - 12000, 0);
 		int max_j = min(i + 12000, (int)cluster->size());
 		int j;
 		neighbors.clear();
-		vector<Voxel*> clust = *cluster;
-#pragma omp parallel for schedule(guided) private(neighbor, x, y, z, x_neighbor, y_neighbor, z_neighbor) shared(neighbors, cluster)
 		for (j = j_min; j < max_j; j++) {
-			//neighbor = cluster->at(j);
-			neighbor = clust.at(j);
+			neighbor = cluster->at(j);
 			x = neighbor->x;
 			y = neighbor->y;
 			z = neighbor->z;
@@ -221,10 +216,6 @@ void Reconstructor::get_floodfill_subset(std::vector<Reconstructor::Voxel*>* clu
 			y_neighbor = y_neighbor_range[0] <= y && y <= y_neighbor_range[1];
 			z_neighbor = z_neighbor_range[0] <= z && z <= z_neighbor_range[1];
 			if (x_neighbor && y_neighbor && z_neighbor) {
-				//cout << "vox: " << vox->x << ", " << vox->y << ", " << vox->z << endl;
-				//cout << "neigh: " << neighbor->x << ", " << neighbor->y << ", " << neighbor->z << endl;
-				//cout << "range x: " << x_neighbor_range[0] << ", " << x_neighbor_range[1] << endl;
-//#pragma omp critical //push_back is critical
 				neighbors.push_back(j);
 			}
 		}
@@ -329,8 +320,6 @@ void Reconstructor::update()
 		clusterIdx = labels.at<int>(i);
 		clusters[clusterIdx].push_back(m_visible_voxels[i]);
 	}
-
-	bool voxel_post_processing = true;
 
 	// Filter out floating voxel clouds
 	std::vector<Voxel*> filtered_visible_voxels;

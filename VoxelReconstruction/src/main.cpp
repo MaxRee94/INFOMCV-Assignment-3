@@ -472,19 +472,26 @@ int main(int argc, char** argv){
         else if (argv[1] == "-m"s || argv[1] == "--manual"s) {
             VoxelReconstruction::showKeys();
             VoxelReconstruction vr(DATA_PATH, 4);
-            vr.run(argc, argv, {0, 0, 0}, {0, 0}, { 30.0f, 30.0f, 80.0f, 50.0f });
+            vr.run(argc, argv, {0, 0, 0}, {0, 0}, { 30.0f, 30.0f, 80.0f, 50.0f }, false);
         }
         else if (argv[1] == "-skip"s || argv[1] == "--skip_tuning"s) {
             VoxelReconstruction::showKeys();
             VoxelReconstruction vr(DATA_PATH, 4);
-            vr.run(argc, argv, { 5, 15, 56 }, { 1, 0 }, { 80.0f, 30.0f, 120.0f, 80.0f }, true, false, true);
+            vr.run(argc, argv, { 5, 15, 56 }, { 1, 0 }, { 80.0f, 30.0f, 120.0f, 80.0f }, false, true, false, true);
         }
         else if (argv[1] == "-c"s || argv[1] == "--clustering"s) {
             VoxelReconstruction::showKeys();
             VoxelReconstruction vr(DATA_PATH, 4);
             //vr.run(argc, argv, { 5, 15, 69 }, { 1, 0 }, { 80.0f, 30.0f, 120.0f, 80.0f }, true, false, true); // optimal segm
             //vr.run(argc, argv, { 5, 18, 47 }, { -1, 3 }, { 0.0f, 0.0f, 120.0f, 0.0f }, true, false, true); // debug
-            vr.run(argc, argv, { 5, 28, 47 }, { -1, 3 }, { 0.0f, 0.0f, 0.0f, 0.0f }, true, false, true); // original 
+            vr.run(argc, argv, { 5, 28, 47 }, { -1, 3 }, { 0.0f, 0.0f, 0.0f, 0.0f }, false, true, false, true); // original 
+        }
+        else if (argv[1] == "-f"s || argv[1] == "--postproc") {
+            VoxelReconstruction::showKeys();
+            VoxelReconstruction vr(DATA_PATH, 4);
+            //vr.run(argc, argv, { 5, 15, 69 }, { 1, 0 }, { 80.0f, 30.0f, 120.0f, 80.0f }, true, false, true); // optimal segm
+            //vr.run(argc, argv, { 5, 18, 47 }, { -1, 3 }, { 0.0f, 0.0f, 120.0f, 0.0f }, true, false, true); // debug
+            vr.run(argc, argv, { 5, 28, 47 }, { -1, 3 }, { 0.0f, 0.0f, 0.0f, 0.0f }, true, true, false, true); // original 
         }
 	}
     else {
@@ -492,11 +499,11 @@ int main(int argc, char** argv){
 
         // Tune background segmentation parameters
         vector<Camera*> m_cam_views = vr.get_cam_views();
-        Scene3DRenderer scene3d = vr.run(argc, argv, { 0, 0, 0 }, { 0, 0 }, { 0.0f, 0.0f, 0.0f, 0.0f }, false, false, false);
+        Scene3DRenderer scene3d = vr.run(argc, argv, { 0, 0, 0 }, { 0, 0 }, { 0.0f, 0.0f, 0.0f, 0.0f }, false, false, false, false);
         vector<float> contour_optima = { 50.0f, 30.0f, 80.0f, 80.0f };
         vector<vector<int>> bg_segm_params = get_bg_segm_params(m_cam_views, &scene3d, &contour_optima);
 
-        vr.run(argc, argv, bg_segm_params[0], bg_segm_params[1], contour_optima, true, false, true);
+        vr.run(argc, argv, bg_segm_params[0], bg_segm_params[1], contour_optima, false, true, false, true);
     }
 
 	return EXIT_SUCCESS;

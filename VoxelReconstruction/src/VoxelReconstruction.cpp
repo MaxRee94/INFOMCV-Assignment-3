@@ -110,7 +110,7 @@ namespace nl_uu_science_gmt
 	 * - Run it!
 	 */
 	Scene3DRenderer VoxelReconstruction::run(
-		int argc, char** argv, vector<int> optimal_hsv_values, vector<int> eros_dil_params, vector<float> contour_params, bool show_glut, bool manual_hsv, bool init_voxels
+		int argc, char** argv, vector<int> optimal_hsv_values, vector<int> eros_dil_params, vector<float> contour_params, bool voxel_post_processing, bool show_glut, bool manual_hsv, bool init_voxels
 	)
 	{
 		for (int v = 0; v < m_cam_views_amount; ++v)
@@ -126,6 +126,7 @@ namespace nl_uu_science_gmt
 		namedWindow(VIDEO_WINDOW, CV_WINDOW_KEEPRATIO);
 
 		Reconstructor reconstructor(m_cam_views, init_voxels);
+		reconstructor.voxel_post_processing = voxel_post_processing;
 		Scene3DRenderer scene3d(reconstructor, m_cam_views, optimal_hsv_values, manual_hsv);
 		scene3d.setErDilParams(eros_dil_params);
 		scene3d.setContourParams(contour_params);
