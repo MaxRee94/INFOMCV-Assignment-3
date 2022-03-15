@@ -406,9 +406,11 @@ void Reconstructor::update()
 	//return;
 
 	// Initialize people point Mats
-	vector<Mat> people_Points = vector<Mat>(4);
-	for (int i = 0; i < 4; i++) {
-		people_Points[i] = Mat(clusterSizes[i], 3, CV_64FC1);
+	vector<vector<Mat>> people_Points(4, {Mat(), Mat(), Mat(), Mat()});
+	for (int clust = 0; clust < 4; clust++) {
+		for (int cam = 0; cam < 4; cam++) {
+			people_Points[clust][cam] = Mat(clusterSizes[clust], 3, CV_64FC1);
+		}
 	}
 
 	// Get color matrices of visible voxels of each cluster
@@ -416,16 +418,13 @@ void Reconstructor::update()
 	for (int i = 0; i < (int)m_visible_voxels.size(); i++) {
 		int clusterIdx = labels.at<int>(i);
 
-		// Take average color of the voxel after projecting it to the 4 camera views
-		Vec3b p_color = Vec3b(0, 0, 0);
 		for (int c = 0; c < 4; c++) {
-			p_color += frames[c].at<Vec3b>(m_visible_voxels[i]->camera_projection[c]);
-		}
-		p_color /= 4.0;
+			p_color = frames[c].at<Vec3b>(m_visible_voxels[i]->camera_projection[c]);
 
-		people_Points[clusterIdx].at<double>(clusterPointIndices[clusterIdx], 0) = (double)p_color[0];
-		people_Points[clusterIdx].at<double>(clusterPointIndices[clusterIdx], 1) = (double)p_color[1];
-		people_Points[clusterIdx].at<double>(clusterPointIndices[clusterIdx], 2) = (double)p_color[2];
+			people_Points[clusterIdx][c].at<double>(clusterPointIndices[clusterIdx], 0) = (double)p_color[0];
+			people_Points[clusterIdx][c].at<double>(clusterPointIndices[clusterIdx], 1) = (double)p_color[1];
+			people_Points[clusterIdx][c].at<double>(clusterPointIndices[clusterIdx], 2) = (double)p_color[2];
+		}
 
 		clusterPointIndices[clusterIdx]++;
 	}
@@ -445,7 +444,7 @@ void Reconstructor::update()
 
 			//train
 			Mat training_labels;
-			em_model->trainEM(people_Points[clusterIdx], noArray(), training_labels, noArray());
+			em_model->trainEM(people_Points[clusterIdx][1], noArray(), training_labels, noArray());
 			
 			color_models.push_back(em_model);
 		}
@@ -454,38 +453,79 @@ void Reconstructor::update()
 	// Online classification
 	Mat sample(1, 3, CV_64FC1);
 	std::map<int, int> clusterClassifications;
+	vector<float> min_diffs;
+	vector<float> max_diffs;
+	vector<float> cam_bests;
+	vector<float> cam_labels;
 	for (int clusterIndx = 0; clusterIndx < 4; clusterIndx++) {
 		vector<int> clusterLabels;
-		vector<double> avg_model_likelihoods = { 0.0, 0.0, 0.0, 0.0 };
+		vector<vector<double>> avg_model_likelihoods = { 4, { 0.0, 0.0, 0.0, 0.0 } };
 		vector<int> labelCounts;
-		int final_label;
-		for (int row = 0; row < people_Points[clusterIndx].rows; row++) {
+
+		min_diffs.clear();
+		max_diffs.clear();
+		cam_bests.clear();
+		cam_labels.clear();
+		
+		for (int row = 0; row < people_Points[clusterIndx][0].rows; row++) {
 			
-			sample.at<double>(0) = people_Points[clusterIndx].at<double>(row, 0);
-			sample.at<double>(1) = people_Points[clusterIndx].at<double>(row, 1);
-			sample.at<double>(2) = people_Points[clusterIndx].at<double>(row, 2);
+			for (int cam = 0; cam < 4; cam++) {
+				sample.at<double>(0) = people_Points[clusterIndx][cam].at<double>(row, 0);
+				sample.at<double>(1) = people_Points[clusterIndx][cam].at<double>(row, 1);
+				sample.at<double>(2) = people_Points[clusterIndx][cam].at<double>(row, 2);
 
-			for (int modelIndx = 0; modelIndx < 4; modelIndx++) {
-				Vec2d predict = color_models[modelIndx]->predict(sample, noArray());
-				Vec2d predict2 = color_models[modelIndx]->predict2(sample, noArray());
+				for (int modelIndx = 0; modelIndx < 4; modelIndx++) {
+					Vec2d predict = color_models[modelIndx]->predict(sample, noArray());
+					Vec2d predict2 = color_models[modelIndx]->predict2(sample, noArray());
 
-				double likelihood = predict2[0];
-				avg_model_likelihoods[modelIndx] += likelihood;
+					double likelihood = predict2[0];
+					avg_model_likelihoods[modelIndx][cam] += likelihood;
+				}
 			}
 		}
-		double best_likelihood = -1e15;
-		for (int q = 0; q < 4; q++) {
-			avg_model_likelihoods[q] /= (double)people_Points[clusterIndx].rows;
-			if (avg_model_likelihoods[q] > best_likelihood) {
-				best_likelihood = avg_model_likelihoods[q];
-				final_label = q;
+		
+		vector<float> local_diffs = vector<float>(3);
+		float clusterSize = (float)people_Points[clusterIndx][0].rows;
+		for (int cam = 0; cam < 4; cam++) {
+
+			// Average likelihoods and collect cam best + cam label
+			float cam_best = -1e15;
+			float cam_label;
+			for (int mod = 0; mod < 4; mod++) {
+				avg_model_likelihoods[mod][cam] /= clusterSize;
+				if (avg_model_likelihoods[mod][cam] > cam_best) {
+					cam_best = avg_model_likelihoods[mod][cam];
+					cam_label = mod;
+				}
 			}
+
+			// Collect local_diffs
+			for (int mod = 0; mod < 4; mod++) {
+				if (avg_model_likelihoods[mod][cam] != cam_best) {
+					local_diffs[mod] = cam_best - avg_model_likelihoods[mod][cam];
+				}
+			}
+			float min_diff = *min_element(local_diffs.begin(), local_diffs.end());
+			float max_diff = *max_element(local_diffs.begin(), local_diffs.end());
+
+			min_diffs.push_back(min_diff);
+			max_diffs.push_back(max_diff);
+			cam_bests.push_back(cam_best);
+			cam_labels.push_back(cam_label);
 		}
-		cout << "likelihood 1: " << avg_model_likelihoods[0] << endl;
-		cout << "likelihood 2: " << avg_model_likelihoods[1] << endl;
-		cout << "likelihood 3: " << avg_model_likelihoods[2] << endl;
-		cout << "likelihood 4: " << avg_model_likelihoods[3] << endl;
-		cout << "label: " << final_label << "\n" << endl;
+
+		// Weight likelihoods according to minimum difference
+		vector<float> weighted_likelihoods;
+		float largest_mindiff = *max_element(min_diffs.begin(), min_diffs.end());
+		for (int c = 0; c < 4; c++) {
+			float min_diff = min_diffs[c];
+			float cam_best = cam_bests[c];
+			float cam_weight = min_diff / largest_mindiff;
+			float weighted_likelihood = cam_best * cam_weight;
+			weighted_likelihoods.push_back(weighted_likelihood);
+		}
+		int cam_with_highest_weighted_likelihood = max_element(weighted_likelihoods.begin(), weighted_likelihoods.end()) - weighted_likelihoods.begin();
+		float final_label = cam_labels[cam_with_highest_weighted_likelihood];
 
 		clusterClassifications[clusterIndx] = final_label;
 
